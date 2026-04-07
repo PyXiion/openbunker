@@ -1,0 +1,52 @@
+[
+  {
+    "id": "bdsm_room",
+    "name": "BDSM Chamber",
+    "description": "Soundproof room with various restraints and equipment. Surprisingly good for stress relief and group bonding exercises."
+  },
+  {
+    "id": "hydroponics",
+    "name": "Hydroponics Bay",
+    "description": "Advanced plant cultivation system for sustainable food production. Essential for long-term survival."
+  },
+  {
+    "id": "armory",
+    "name": "Armory",
+    "description": "Secure weapons storage and maintenance facility. Contains firearms, ammunition, and tactical equipment."
+  },
+  {
+    "id": "server_room",
+    "name": "Server Room",
+    "description": "Climate-controlled data center housing main computer systems. Critical for communications and bunker operations."
+  },
+  {
+    "id": "medical_bay",
+    "name": "Medical Bay",
+    "description": "Full surgical suite with diagnostic equipment and pharmacy supplies. Can handle most medical emergencies."
+  },
+  {
+    "id": "workshop",
+    "name": "Engineering Workshop",
+    "description": "Fully equipped machine shop with tools, 3D printers, and spare parts. Essential for repairs and manufacturing."
+  },
+  {
+    "id": "gym",
+    "name": "Fitness Center",
+    "description": "Exercise equipment and training space. Helps maintain physical and mental health during confinement."
+  },
+  {
+    "id": "library",
+    "name": "Archive Library",
+    "description": "Digital and physical knowledge repository. Contains crucial survival manuals and entertainment."
+  },
+  {
+    "id": "recycling",
+    "name": "Recycling Plant",
+    "description": "Waste processing and material recovery systems. Converts waste into usable resources."
+  },
+  {
+    "id": "observation",
+    "name": "Observation Deck",
+    "description": "Periscope and sensor array for monitoring surface conditions. Your only window to the outside world."
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "name": "bunker-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Bunker social deduction game",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxtjs/i18n": "^10.2.4",
+    "@nuxtjs/tailwindcss": "^6.8.4",
+    "@pinia/nuxt": "^0.5.1",
+    "nuxt": "^3.8.0",
+    "pinia": "^2.1.7",
+    "socket.io-client": "^4.7.4"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest",
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3"
+  }
+}

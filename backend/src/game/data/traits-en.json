@@ -1,0 +1,729 @@
+{
+  "profession": [
+    {
+      "id": "doctor",
+      "name": "DOCTOR",
+      "description": "Can treat injuries and diseases. Essential for long-term health."
+    },
+    {
+      "id": "engineer",
+      "name": "ENGINEER",
+      "description": "Can maintain and repair bunker systems. Critical for infrastructure."
+    },
+    {
+      "id": "scientist",
+      "name": "SCIENTIST",
+      "description": "Research capabilities. May find solutions to external threats."
+    },
+    {
+      "id": "soldier",
+      "name": "SOLDIER",
+      "description": "Combat trained. Provides security and defense capabilities."
+    },
+    {
+      "id": "farmer",
+      "name": "FARMER",
+      "description": "Expert in food production. Essential for sustainable nutrition."
+    },
+    {
+      "id": "mechanic",
+      "name": "MECHANIC",
+      "description": "Can repair machinery and vehicles. Useful for equipment maintenance."
+    },
+    {
+      "id": "teacher",
+      "name": "TEACHER",
+      "description": "Can educate and train others. Important for knowledge preservation."
+    },
+    {
+      "id": "chef",
+      "name": "CHEF",
+      "description": "Expert in food preparation. Can make limited supplies last longer."
+    },
+    {
+      "id": "programmer",
+      "name": "PROGRAMMER",
+      "description": "Can operate and code computer systems. Essential for bunker tech."
+    },
+    {
+      "id": "electrician",
+      "name": "ELECTRICIAN",
+      "description": "Specializes in electrical systems. Critical for power maintenance."
+    },
+    {
+      "id": "psychologist",
+      "name": "PSYCHOLOGIST",
+      "description": "Mental health expert. Can maintain group morale and treat psychological trauma."
+    },
+    {
+      "id": "security_guard",
+      "name": "SECURITY GUARD",
+      "description": "Trained in surveillance and threat assessment. Keeps order in confined spaces."
+    },
+    {
+      "id": "biologist",
+      "name": "BIOLOGIST",
+      "description": "Expert in life sciences. Can analyze samples and develop treatments."
+    },
+    {
+      "id": "librarian",
+      "name": "LIBRARIAN",
+      "description": "Knowledge keeper. Knows how to preserve and find vital information."
+    },
+    {
+      "id": "influencer",
+      "name": "SOCIAL MEDIA INFLUENCER",
+      "description": "No practical skills. Useless without internet and followers."
+    },
+    {
+      "id": "nft_trader",
+      "name": "CRYPTO/NFT TRADER",
+      "description": "Lost everything in the crash. No survival skills whatsoever."
+    },
+    {
+      "id": "life_coach",
+      "name": "LIFE COACH",
+      "description": "Motivational quotes won't fix a broken air filter. No tangible skills."
+    },
+    {
+      "id": "reality_tv_star",
+      "name": "REALITY TV STAR",
+      "description": "Famous for being dramatic. Brings chaos and ego, zero utility."
+    },
+    {
+      "id": "door_to_door",
+      "name": "DOOR-TO-DOOR SALESMAN",
+      "description": "Annoying persistence. Everyone already hates them from before the apocalypse."
+    },
+    {
+      "id": "mall_santa",
+      "name": "MALL SANTA",
+      "description": "Overweight, out of shape. Good with kids but useless in crisis."
+    },
+    {
+      "id": "telemarketer",
+      "name": "TELEMARKETER",
+      "description": "Master of nuisance. Has angered everyone they've ever contacted."
+    },
+    {
+      "id": "professional_gamer",
+      "name": "PROFESSIONAL GAMER",
+      "description": "Reflexes are sharp but no physical stamina. Expects others to serve them."
+    },
+    {
+      "id": "con_artist",
+      "name": "CON ARTIST",
+      "description": "Skilled at deception. Trust them at your own peril."
+    },
+    {
+      "id": "incompetent_lawyer",
+      "name": "FAILED LAWYER",
+      "description": "Argues incessantly about everything. Lost every case they've ever had."
+    }
+  ],
+  "biology": [
+    {
+      "id": "young_healthy",
+      "name": "YOUNG & HEALTHY",
+      "description": "25 years old, excellent physical condition. Peak immune system."
+    },
+    {
+      "id": "middle_aged",
+      "name": "MIDDLE-AGED",
+      "description": "45 years old, decent health. Life experience and stability."
+    },
+    {
+      "id": "elderly",
+      "name": "ELDERLY",
+      "description": "70 years old, frail health. Wisdom and life experience."
+    },
+    {
+      "id": "athlete",
+      "name": "ATHLETIC",
+      "description": "Excellent physical fitness. Can perform demanding labor."
+    },
+    {
+      "id": "immune_strong",
+      "name": "STRONG IMMUNITY",
+      "description": "Rare blood type, resistant to most diseases. Biological asset."
+    },
+    {
+      "id": "chronic_illness",
+      "name": "CHRONIC ILLNESS",
+      "description": "Requires regular medication. Potential resource drain."
+    },
+    {
+      "id": "fertile",
+      "name": "HIGHLY FERTILE",
+      "description": "Excellent reproductive health. Important for population rebuilding."
+    },
+    {
+      "id": "sterile",
+      "name": "STERILE",
+      "description": "Cannot reproduce. No long-term genetic contribution."
+    },
+    {
+      "id": "disabled",
+      "name": "PHYSICALLY DISABLED",
+      "description": "Limited mobility. May require additional care and resources."
+    },
+    {
+      "id": "genius_iq",
+      "name": "GENIUS IQ",
+      "description": "Exceptional intelligence. Can solve complex problems."
+    },
+    {
+      "id": "insomnia",
+      "name": "INSOMNIAC",
+      "description": "Requires little sleep. Can maintain night watch and work longer hours."
+    },
+    {
+      "id": "adaptive_metabolism",
+      "name": "ADAPTIVE METABOLISM",
+      "description": "Can survive on minimal food and water. Efficient resource usage."
+    },
+    {
+      "id": "color_blind",
+      "name": "COLOR BLIND",
+      "description": "Cannot distinguish certain colors. Minor limitation in some tasks."
+    },
+    {
+      "id": "synesthesia",
+      "name": "SYNESTHESIA",
+      "description": "Senses are cross-wired. Unusual perception may provide unique insights."
+    },
+    {
+      "id": "hemophilia",
+      "name": "HEMOPHILIA",
+      "description": "Blood doesn't clot properly. Even minor injuries can be fatal."
+    },
+    {
+      "id": "diabetes",
+      "name": "TYPE 1 DIABETES",
+      "description": "Requires constant insulin. Without medication, will die quickly."
+    },
+    {
+      "id": "epilepsy",
+      "name": "EPILEPSY",
+      "description": "Random seizures without warning. Dangerous around machinery."
+    },
+    {
+      "id": "severe_asthma",
+      "name": "SEVERE ASTHMA",
+      "description": "Breathing difficulties. Poor air quality is life-threatening."
+    },
+    {
+      "id": "obesity",
+      "name": "MORBIDLY OBESE",
+      "description": "Can barely move. Consumes triple rations. Heart condition imminent."
+    },
+    {
+      "id": "deaf",
+      "name": "DEAF",
+      "description": "Cannot hear alarms, warnings, or conversations. Communication barrier."
+    },
+    {
+      "id": "blind",
+      "name": "BLIND",
+      "description": "No vision. Completely dependent on others for basic tasks."
+    },
+    {
+      "id": "schizophrenia",
+      "name": "SCHIZOPHRENIA",
+      "description": "Hears voices and has delusions. Unpredictable and potentially dangerous."
+    },
+    {
+      "id": "allergic",
+      "name": "EXTREME ALLERGIES",
+      "description": "Severe reactions to common foods and substances. EpiPen dependent."
+    }
+  ],
+  "hobby": [
+    {
+      "id": "chess_master",
+      "name": "CHESS MASTER",
+      "description": "Expert strategist. Can plan complex operations and tactics."
+    },
+    {
+      "id": "musician",
+      "name": "MUSICIAN",
+      "description": "Can maintain morale. Provides cultural enrichment."
+    },
+    {
+      "id": "gardener",
+      "name": "GARDENER",
+      "description": "Expert in plant cultivation. Useful for food production."
+    },
+    {
+      "id": "writer",
+      "name": "WRITER",
+      "description": "Can document experiences. Preserves knowledge and history."
+    },
+    {
+      "id": "artist",
+      "name": "ARTIST",
+      "description": "Maintains human culture. Important for mental health."
+    },
+    {
+      "id": "gamer",
+      "name": "GAMER",
+      "description": "Expert problem solver. Quick thinking under pressure."
+    },
+    {
+      "id": "survivalist",
+      "name": "SURVIVALIST",
+      "description": "Trained in wilderness survival. Adaptability skills."
+    },
+    {
+      "id": "meditator",
+      "name": "MEDITATOR",
+      "description": "Mentally disciplined. Can maintain calm in crisis."
+    },
+    {
+      "id": "inventor",
+      "name": "INVENTOR",
+      "description": "Creative problem solver. Can create solutions from limited resources."
+    },
+    {
+      "id": "historian",
+      "name": "HISTORIAN",
+      "description": "Knows what works and what doesn't. Learns from past mistakes."
+    },
+    {
+      "id": "amateur_radio",
+      "name": "HAM RADIO OPERATOR",
+      "description": "Can communicate over long distances. May contact other survivors."
+    },
+    {
+      "id": "lock_picking",
+      "name": "LOCK PICKER",
+      "description": "Skilled at opening locks without keys. Useful for accessing sealed areas."
+    },
+    {
+      "id": "first_aid",
+      "name": "FIRST AID EXPERT",
+      "description": "Trained in emergency medicine. Can stabilize injuries until doctor arrives."
+    },
+    {
+      "id": "brewer",
+      "name": "HOME BREWER",
+      "description": "Knows fermentation and preservation. Can purify water and make antiseptics."
+    },
+    {
+      "id": "trolling",
+      "name": "INTERNET TROLL",
+      "description": "Spends hours arguing online. Provokes fights for entertainment. No real skills."
+    },
+    {
+      "id": "complainer",
+      "name": "PROFESSIONAL COMPLAINER",
+      "description": "Expert at finding faults in everything. Demoralizes everyone around them."
+    },
+    {
+      "id": "hoarder_hobby",
+      "name": "JUNK COLLECTOR",
+      "description": "Hoards useless items. Bunker space filled with garbage and broken trinkets."
+    },
+    {
+      "id": "prankster",
+      "name": "PRANKSTER",
+      "description": "Constant practical jokes. Creates tension and wastes resources on 'funny' experiments."
+    },
+    {
+      "id": "gossip",
+      "name": "RUMOR MONGER",
+      "description": "Spreads misinformation and drama. Destroys trust and cohesion in the group."
+    },
+    {
+      "id": "daydreamer",
+      "name": "MALADAPTIVE DAYDREAMER",
+      "description": "Lost in fantasy worlds. Unreliable and disconnected from reality."
+    },
+    {
+      "id": "compulsive_gambler",
+      "name": "COMPULSIVE GAMBLER",
+      "description": "Will bet anything on anything. Creates dangerous situations over trivial stakes."
+    },
+    {
+      "id": "doomscroller",
+      "name": "DOOMSCROLLER",
+      "description": "Obsessed with catastrophizing. Paralyzed by endless worst-case scenarios."
+    },
+    {
+      "id": "sugar_daddy",
+      "name": "ONLYFANS ADDICT",
+      "description": "Spent fortune on parasocial relationships. No actual social skills or self-respect."
+    },
+    {
+      "id": "flat_earther",
+      "name": "CONSPIRACY THEORIST",
+      "description": "Believes Earth is flat and vaccines are mind control. Rejects all science."
+    }
+  ],
+  "phobia": [
+    {
+      "id": "claustrophobia",
+      "name": "CLAUSTROPHOBIA",
+      "description": "Fear of enclosed spaces. Problematic for bunker living."
+    },
+    {
+      "id": "germophobia",
+      "name": "GERMOPHOBIA",
+      "description": "Fear of germs. May cause hygiene obsession."
+    },
+    {
+      "id": "arachnophobia",
+      "name": "ARACHNOPHOBIA",
+      "description": "Fear of spiders. Generally irrelevant in bunker."
+    },
+    {
+      "id": "nyctophobia",
+      "name": "NYCTOPHOBIA",
+      "description": "Fear of darkness. Issue during power failures."
+    },
+    {
+      "id": "agoraphobia",
+      "name": "AGORAPHOBIA",
+      "description": "Fear of open spaces. Actually beneficial for bunker life."
+    },
+    {
+      "id": "acrophobia",
+      "name": "ACROPHOBIA",
+      "description": "Fear of heights. Not relevant underground."
+    },
+    {
+      "id": "social_anxiety",
+      "name": "SOCIAL ANXIETY",
+      "description": "Fear of social interaction. Problematic for close quarters."
+    },
+    {
+      "id": "blood_phobia",
+      "name": "BLOOD PHOBIA",
+      "description": "Fear of blood. Problematic for medical emergencies."
+    },
+    {
+      "id": "entomophobia",
+      "name": "ENTOMOPHOBIA",
+      "description": "Fear of insects. May be relevant for food production."
+    },
+    {
+      "id": "none",
+      "name": "NO PHOBIAS",
+      "description": "Mentally stable. No irrational fears affecting performance."
+    },
+    {
+      "id": "thanatophobia",
+      "name": "THANATOPHOBIA",
+      "description": "Fear of death. May panic in life-threatening situations."
+    },
+    {
+      "id": "monophobia",
+      "name": "MONOPHOBIA",
+      "description": "Fear of being alone. Requires constant company."
+    },
+    {
+      "id": "atychiphobia",
+      "name": "ATYCHIPHOBIA",
+      "description": "Fear of failure. Paralyzed by high-pressure decisions."
+    },
+    {
+      "id": "philosophobia",
+      "name": "PHILOSOPHOBIA",
+      "description": "Fear of philosophy and deep thinking. Avoids complex moral discussions."
+    },
+    {
+      "id": "coulrophobia",
+      "name": "COULROPHOBIA",
+      "description": "Fear of clowns. Traumatized by birthday parties. Useless fear in bunker."
+    },
+    {
+      "id": "decidophobia",
+      "name": "DECIDOPHOBIA",
+      "description": "Fear of making decisions. Completely paralyzed by choices."
+    },
+    {
+      "id": "pedophobia",
+      "name": "PEDOPHOBIA",
+      "description": "Fear of children. Problematic if someone reveals they are pregnant."
+    },
+    {
+      "id": "haphephobia",
+      "name": "HAPHEPHOBIA",
+      "description": "Fear of being touched. Cannot tolerate physical contact of any kind."
+    },
+    {
+      "id": "loud_noises",
+      "name": "LIGYROPHOBIA",
+      "description": "Fear of loud noises. Alarms and machinery cause panic attacks."
+    },
+    {
+      "id": "catastrophobia",
+      "name": "CATASTROPHOBIA",
+      "description": "Fear of disasters. Ironically terrified of the exact situation they're in."
+    },
+    {
+      "id": "emetophobia",
+      "name": "EMETOPHOBIA",
+      "description": "Fear of vomiting. Refuses to eat suspicious food or help sick people."
+    },
+    {
+      "id": "trypanophobia",
+      "name": "TRYPANOPHOBIA",
+      "description": "Fear of needles. Cannot receive injections or IV fluids."
+    },
+    {
+      "id": "ponophobia",
+      "name": "PONOPHOBIA",
+      "description": "Fear of overworking. Refuses to do any strenuous labor."
+    },
+    {
+      "id": "zoophobia",
+      "name": "ZOOPHOBIA",
+      "description": "Fear of animals. Cannot handle livestock or even see pets."
+    }
+  ],
+  "baggage": [
+    {
+      "id": "criminal_record",
+      "name": "CRIMINAL RECORD",
+      "description": "Convicted of violent crimes. Potential security risk."
+    },
+    {
+      "id": "addiction",
+      "name": "ADDICTION",
+      "description": "Substance dependence. May cause withdrawal issues."
+    },
+    {
+      "id": "family_man",
+      "name": "FAMILY MAN",
+      "description": "Left family behind. May have emotional breakdown."
+    },
+    {
+      "id": "wealthy",
+      "name": "FORMERLY WEALTHY",
+      "description": "Accustomed to luxury. May struggle with austerity."
+    },
+    {
+      "id": "religious_fanatic",
+      "name": "RELIGIOUS FANATIC",
+      "description": "Extreme beliefs. May cause conflicts with others."
+    },
+    {
+      "id": "pacifist",
+      "name": "PACIFIST",
+      "description": "Refuses to use violence. Problematic for defense."
+    },
+    {
+      "id": "hoarder",
+      "name": "HOARDER",
+      "description": "Compulsive resource accumulation. May cause conflicts."
+    },
+    {
+      "id": "leadership",
+      "name": "NATURAL LEADER",
+      "description": "Born leader. Can organize and motivate others."
+    },
+    {
+      "id": "optimist",
+      "name": "ETERNAL OPTIMIST",
+      "description": "Maintains morale. Sees opportunity in crisis."
+    },
+    {
+      "id": "pessimist",
+      "name": "CHRONIC PESSIMIST",
+      "description": "Always expects worst. May depress group morale."
+    },
+    {
+      "id": "trust_issues",
+      "name": "TRUST ISSUES",
+      "description": "Paranoid about others' intentions. Suspicious of everyone."
+    },
+    {
+      "id": "kleptomania",
+      "name": "KLEPTOMANIA",
+      "description": "Compulsive urge to steal. May take items without permission."
+    },
+    {
+      "id": "pyromaniac",
+      "name": "PYROMANIAC",
+      "description": "Obsessed with fire. Dangerous in enclosed spaces with flammable materials."
+    },
+    {
+      "id": "martial_artist",
+      "name": "MARTIAL ARTIST",
+      "description": "Trained in hand-to-hand combat. Can defend without weapons."
+    },
+    {
+      "id": "narcissist",
+      "name": "NARCISSIST",
+      "description": "Obsessed with self-importance. Cannot tolerate not being the center of attention."
+    },
+    {
+      "id": "sociopath",
+      "name": "SOCIOPATH",
+      "description": "No empathy or conscience. Manipulates others without remorse."
+    },
+    {
+      "id": "coward",
+      "name": "COWARD",
+      "description": "Paralyzed by fear when others need them most. Abandons posts in crisis."
+    },
+    {
+      "id": "loud_sleeper",
+      "name": "LOUD SNORER",
+      "description": "Shakes walls with snoring. Keeps everyone awake. Sleep deprivation for all."
+    },
+    {
+      "id": "hypochondriac",
+      "name": "HYPOCHONDRIAC",
+      "description": "Constantly believes they're dying. Wastes medical supplies on imaginary ailments."
+    },
+    {
+      "id": "victim_complex",
+      "name": "VICTIM MENTALITY",
+      "description": "Everything is always someone else's fault. Never takes responsibility."
+    },
+    {
+      "id": "control_freak",
+      "name": "CONTROL FREAK",
+      "description": "Must micromanage everything. Creates conflict by not trusting anyone."
+    },
+    {
+      "id": "perfectionist",
+      "name": "TOXIC PERFECTIONIST",
+      "description": "Never satisfied with anything. Criticizes everyone's work endlessly."
+    },
+    {
+      "id": "doomsayer",
+      "name": "DOOMSAYER",
+      "description": "Predicts catastrophe every day. Convinced everything will fail."
+    },
+    {
+      "id": "hypocrite",
+      "name": "HYPOCRITE",
+      "description": "Preaches rules for others, breaks them constantly. 'Rules for thee, not for me.'"
+    }
+  ],
+  "fact": [
+    {
+      "id": "secret_immune",
+      "name": "SECRETLY IMMUNE",
+      "description": "Natural immunity to the catastrophe. Unknown to others."
+    },
+    {
+      "id": "saboteur",
+      "name": "SABOTEUR",
+      "description": "Secretly plans to destroy bunker from within."
+    },
+    {
+      "id": "hidden_skills",
+      "name": "HIDDEN TALENTS",
+      "description": "Possesses valuable skills not listed in profession."
+    },
+    {
+      "id": "terminal_illness",
+      "name": "TERMINAL ILLNESS",
+      "description": "Less than 1 year to live. May hide this fact."
+    },
+    {
+      "id": "pregnant",
+      "name": "PREGNANT",
+      "description": "Currently pregnant. Future of humanity depends."
+    },
+    {
+      "id": "double_agent",
+      "name": "DOUBLE AGENT",
+      "description": "Working for external faction. Gathering intelligence."
+    },
+    {
+      "id": "cures_disease",
+      "name": "DISEASE CURE",
+      "description": "Knows cure for relevant condition. Critical asset."
+    },
+    {
+      "id": "resource_location",
+      "name": "RESOURCE MAP",
+      "description": "Knows location of hidden supplies. Very valuable."
+    },
+    {
+      "id": "none_special",
+      "name": "NOTHING SPECIAL",
+      "description": "Completely ordinary. No hidden advantages or disadvantages."
+    },
+    {
+      "id": "lucky_charm",
+      "name": "LUCKY CHARM",
+      "description": "Unusually lucky. Seems to avoid trouble naturally."
+    },
+    {
+      "id": "witness",
+      "name": "WITNESS",
+      "description": "Saw something they shouldn't have. May be targeted by external forces."
+    },
+    {
+      "id": "lottery_winner",
+      "name": "LOTTERY WINNER",
+      "description": "Rich before the catastrophe. Bribed their way into the bunker."
+    },
+    {
+      "id": "amnesia",
+      "name": "AMNESIA",
+      "description": "Cannot remember their past. Identity and skills are unknown even to them."
+    },
+    {
+      "id": "stowaway",
+      "name": "STOWAWAY",
+      "description": "Not on the official manifest. Snuck in and could be anyone."
+    },
+    {
+      "id": "infected",
+      "name": "SECRETLY INFECTED",
+      "description": "Carries deadly pathogen. Will spread disease to others soon."
+    },
+    {
+      "id": "murderer",
+      "name": "SERIAL KILLER",
+      "description": "Has killed before and will kill again. Hiding in plain sight."
+    },
+    {
+      "id": "wanted",
+      "name": "WANTED CRIMINAL",
+      "description": "Authorities searching for them. May bring trouble to the bunker."
+    },
+    {
+      "id": "cannibal",
+      "name": "CANNIBAL",
+      "description": "Already eaten human flesh. Views others as potential food."
+    },
+    {
+      "id": "rat",
+      "name": "INFORMANT",
+      "description": "Reporting bunker location to hostile outside forces."
+    },
+    {
+      "id": "thief",
+      "name": "MASTER THIEF",
+      "description": "Stole something vital before entering. The group is missing critical supplies."
+    },
+    {
+      "id": "impostor",
+      "name": "IMPOSTOR",
+      "description": "Not who they claim to be. Stole a real person's identity and credentials."
+    },
+    {
+      "id": "pyromaniac_secret",
+      "name": "ARSONIST",
+      "description": "Burned down their previous shelter. Will likely do it again here."
+    },
+    {
+      "id": "typhoid_mary",
+      "name": "ASYMPTOMATIC CARRIER",
+      "description": "Healthy but spreads deadly disease. Doesn't know they're infected."
+    },
+    {
+      "id": "compromised",
+      "name": "COMPROMISED",
+      "description": "Being blackmailed. Forced to sabotage the group or their family dies."
+    }
+  ]
+}

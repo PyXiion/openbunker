@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Technical Specification CSS */
+@layer base {
+  * {
+    transition-duration: 0ms;
+  }
+  
+  body {
+    cursor: crosshair;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+@layer components {
+  .tech-button {
+    @apply border-2 border-contrast bg-base px-4 py-2 font-bold text-contrast uppercase;
+    @apply hover:bg-contrast hover:text-base;
+    @apply active:translate-x-0.5 active:translate-y-0.5;
+  }
+  
+  .tech-tile {
+    @apply border-2 border-contrast bg-base p-4;
+  }
+  
+  .tech-tile-header {
+    @apply border-b-2 border-contrast pb-2 mb-4 font-bold text-contrast uppercase;
+  }
+  
+  .tech-hidden {
+    @apply bg-gray-300;
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(0, 0, 0, 0.1) 4px,
+      rgba(0, 0, 0, 0.1) 8px
+    );
+  }
+  
+  .tech-card {
+    @apply border-2 border-contrast bg-base p-3 cursor-crosshair;
+    @apply hover:bg-contrast hover:text-base;
+  }
+  
+  .tech-card-revealed {
+    @apply border-2 border-contrast bg-base p-3;
+  }
+  
+  .tech-grid {
+    @apply grid gap-4;
+  }
+  
+  .tech-grid-tight {
+    @apply grid gap-2;
+  }
+  
+  .tech-progress {
+    @apply font-mono text-contrast;
+  }
+}

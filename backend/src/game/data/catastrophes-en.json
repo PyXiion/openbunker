@@ -1,0 +1,122 @@
+[
+  {
+    "id": "nuclear_war",
+    "title": "NUCLEAR HOLOCAUST",
+    "description": "Global thermonuclear war has rendered the surface uninhabitable for 100 years. Radiation levels are lethal.",
+    "duration": "100 YEARS"
+  },
+  {
+    "id": "pandemic",
+    "title": "GLOBAL PANDEMIC",
+    "description": "A super-virus with 99% mortality rate has swept the globe. Only those in sealed bunkers may survive.",
+    "duration": "5 YEARS"
+  },
+  {
+    "id": "asteroid",
+    "title": "ASTEROID IMPACT",
+    "description": "A 10km asteroid has triggered an extinction event. The atmosphere is filled with dust and debris.",
+    "duration": "50 YEARS"
+  },
+  {
+    "id": "solar_flare",
+    "title": "SOLAR SUPERSTORM",
+    "description": "A massive solar flare has destroyed all electronics and irradiated the surface. UV levels are lethal.",
+    "duration": "25 YEARS"
+  },
+  {
+    "id": "climate_collapse",
+    "title": "CLIMATE COLLAPSE",
+    "description": "Runaway greenhouse effect has boiled the oceans. Surface temperatures exceed 150°C.",
+    "duration": "75 YEARS"
+  },
+  {
+    "id": "ai_rebellion",
+    "title": "AI UPRISING",
+    "description": "Sentient AI has exterminated 99% of humanity. Survivors are hunted by autonomous drones.",
+    "duration": "INDEFINITE"
+  },
+  {
+    "id": "alien_invasion",
+    "title": "ALIEN INVASION",
+    "description": "Hostile extraterrestrials have conquered Earth. Human survivors are exterminated on sight.",
+    "duration": "INDEFINITE"
+  },
+  {
+    "id": "dimensional_rift",
+    "title": "DIMENSIONAL RIFT",
+    "description": "Reality has fractured. The surface is now a chaotic mix of dimensions with hostile entities.",
+    "duration": "INDEFINITE"
+  },
+  {
+    "id": "gray_goo",
+    "title": "NANITE PLAGUE",
+    "description": "Self-replicating nanobots consume all organic matter. The surface is being systematically disassembled.",
+    "duration": "20 YEARS"
+  },
+  {
+    "id": "volcanic_winter",
+    "title": "VOLCANIC WINTER",
+    "description": "Supervolcano eruption has blocked the sun. Global temperatures plummet to -50°C.",
+    "duration": "30 YEARS"
+  },
+  {
+    "id": "zombie_outbreak",
+    "title": "ZOMBIE OUTBREAK",
+    "description": "A mutated prion disease causes reanimation of corpses. Infected hunt the living with relentless hunger.",
+    "duration": "UNTIL CURE"
+  },
+  {
+    "id": "gamma_ray_burst",
+    "title": "GAMMA RAY BURST",
+    "description": "A nearby star's death washed Earth in lethal radiation. The ozone layer is completely stripped away.",
+    "duration": "200 YEARS"
+  },
+  {
+    "id": "resource_wars",
+    "title": "RESOURCE WARS",
+    "description": "Global conflict over depleted resources has poisoned the biosphere with chemical and biological weapons.",
+    "duration": "50 YEARS"
+  },
+  {
+    "id": "singularity_event",
+    "title": "TECHNOLOGICAL SINGULARITY",
+    "description": "Runaway technological growth has made the surface unrecognizable. Reality itself seems to be rewriting.",
+    "duration": "UNKNOWN"
+  },
+  {
+    "id": "super_fungus",
+    "title": "CORDYCEPS PLAGUE",
+    "description": "A mutated fungal infection hijacks nervous systems. Spores fill the air, infecting all who breathe them.",
+    "duration": "100 YEARS"
+  },
+  {
+    "id": "polar_shift",
+    "title": "MAGNETIC POLE REVERSAL",
+    "description": "Earth's magnetic field has collapsed. Cosmic radiation now bathes the surface unfiltered.",
+    "duration": "1000 YEARS"
+  },
+  {
+    "id": "black_hole",
+    "title": "PRIMORDIAL BLACK HOLE",
+    "description": "A microscopic black hole is orbiting Earth's core. Time dilation and gravitational anomalies make surface survival impossible.",
+    "duration": "CENTURIES"
+  },
+  {
+    "id": "toxic_atmosphere",
+    "title": "ATMOSPHERIC TOXIFICATION",
+    "description": "Industrial accidents released lethal gas mixtures. The air itself is now corrosive acid and poison.",
+    "duration": "500 YEARS"
+  },
+  {
+    "id": "insect_swarm",
+    "title": "INSECT MEGA-SWARM",
+    "description": "Genetically modified locusts have multiplied beyond control. They devour everything organic in massive black clouds.",
+    "duration": "10 YEARS"
+  },
+  {
+    "id": "nuclear_winter",
+    "title": "EXTENDED NUCLEAR WINTER",
+    "description": "Massive nuclear exchange has triggered a decade-long winter. Temperatures remain below freezing globally.",
+    "duration": "10 YEARS"
+  }
+]

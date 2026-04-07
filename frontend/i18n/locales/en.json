@@ -1,0 +1,179 @@
+{
+  "app": {
+    "title": "BUNKER",
+    "subtitle": "SOCIAL DEDUCTION GAME"
+  },
+  "pages": {
+    "index": {
+      "joinGame": "JOIN GAME",
+      "nickname": "NICKNAME",
+      "nicknamePlaceholder": "ENTER_NICKNAME",
+      "roomCode": "ROOM CODE",
+      "roomCodePlaceholder": "ROOM_CODE",
+      "clear": "CLEAR",
+      "createRoom": "CREATE ROOM",
+      "joinRoom": "JOIN ROOM",
+      "error": "ERROR",
+      "status": "STATUS",
+      "connected": "CONNECTED",
+      "disconnected": "DISCONNECTED",
+      "instructions": "HOW TO PLAY",
+      "instructionSteps": [
+        "Create a room or join with a code",
+        "Each player gets 6 hidden trait cards",
+        "Take turns revealing cards about yourself",
+        "Profession must be revealed first",
+        "Persuade others why you deserve to survive",
+        "Vote to exile players when bunker is full",
+        "Survivors must match bunker capacity"
+      ],
+      "gameDescription": "A social deduction survival game. After a global catastrophe, only a few can fit in the bunker. Reveal your skills, negotiate, and vote on who deserves to survive."
+    },
+    "room": {
+      "loading": "LOADING ROOM...",
+      "leaveConfirm": "Are you sure you want to leave the room? This will end your participation in the current game. You won't be able to return."
+    }
+  },
+  "components": {
+    "roomHeader": {
+      "room": "ROOM",
+      "status": "STATUS",
+      "round": "ROUND",
+      "leaveRoom": "LEAVE ROOM",
+      "copyCode": "COPY CODE",
+      "copied": "COPIED!",
+      "regenerateCode": "Generate new room code",
+      "newCode": "NEW CODE"
+    },
+    "gameLobby": {
+      "lobby": "LOBBY",
+      "players": "PLAYERS",
+      "host": "HOST",
+      "startGame": "START GAME",
+      "reconnecting": "RECONNECTING...",
+      "waitingForPlayers": "WAITING FOR PLAYERS (MIN {min})",
+      "waitingForHost": "WAITING FOR HOST TO START",
+      "choosingNewHost": "CHOOSING NEW HOST ({playerName}) IN {seconds}s",
+      "kickPlayer": "Kick player",
+      "bunkerSettings": "BUNKER SETTINGS",
+      "bunkerSettingsHelp": "Configure bunker capacity, first trait to reveal, and content filter settings",
+      "autoCapacity": "Auto ({count} places)",
+      "customCapacity": "Custom places",
+      "capacityRange": "({min}-{max})",
+      "bunkerCapacity": "Bunker capacity: {count} places",
+      "auto": "auto",
+      "firstTraitToReveal": "First trait to reveal",
+      "anyTrait": "Any",
+      "enableContentFilter": "Enable content filter",
+      "autoCapacityHelp": "Automatically calculate bunker capacity based on player count (60% of players)",
+      "customCapacityHelp": "Set a custom bunker capacity. Must be between 1-10 places",
+      "firstTraitHelp": "Force the first trait that players must reveal. 'Any' allows free choice",
+      "contentFilterHelp": "Filter inappropriate content in the chat"
+    },
+    "tooltip": {
+      "help": "HELP"
+    },
+    "catastropheCard": {
+      "catastrophe": "CATASTROPHE",
+      "duration": "DURATION"
+    },
+    "bunkerStats": {
+      "bunkerStatus": "BUNKER STATUS",
+      "capacity": "CAPACITY",
+      "food": "FOOD",
+      "water": "WATER",
+      "medicine": "MEDICINE",
+      "power": "POWER",
+      "days": "DAYS",
+      "units": "UNITS"
+    },
+    "playersTable": {
+      "players": "PLAYERS",
+      "you": "YOU",
+      "active": "ACTIVE",
+      "exiled": "EXILED"
+    },
+    "playerHand": {
+      "yourHand": "YOUR HAND",
+      "hidden": "HIDDEN"
+    },
+    "turnActions": {
+      "yourTurn": "YOUR TURN",
+      "mustRevealProfession": "MUST REVEAL PROFESSION FIRST",
+      "revealMoreCards": "REVEAL {count} MORE CARD(S) TO CONTINUE",
+      "maxCardsRevealed": "MAX CARDS REVEALED THIS TURN",
+      "endTurn": "END TURN",
+      "waiting": "WAITING",
+      "notYourTurn": "Not your turn"
+    },
+    "gameVoting": {
+      "votingPhase": "VOTING PHASE",
+      "voteToExile": "VOTE TO EXILE",
+      "voteStatus": "VOTE STATUS",
+      "voted": "VOTED",
+      "pending": "PENDING",
+      "votes": "VOTES"
+    },
+    "gameFinished": {
+      "gameFinished": "GAME FINISHED",
+      "survivors": "SURVIVORS"
+    },
+    "languageSwitcher": {
+      "language": "Language"
+    },
+    "siteFooter": {
+      "createdBy": "Created by {author}"
+    },
+    "chat": {
+      "title": "COMMS LOG",
+      "empty": "// NO TRANSMISSIONS //",
+      "placeholder": "ENTER MESSAGE...",
+      "send": "SEND"
+    }
+  },
+  "traits": {
+    "types": {
+      "profession": "PROFESSION",
+      "biology": "BIOLOGY",
+      "hobby": "HOBBY",
+      "phobia": "PHOBIA",
+      "baggage": "BAGGAGE",
+      "fact": "FACT"
+    },
+    "short": {
+      "profession": "PRO",
+      "biology": "BIO",
+      "hobby": "HOB",
+      "phobia": "PHO",
+      "baggage": "BAG",
+      "fact": "FCT"
+    }
+  },
+  "game": {
+    "status": {
+      "lobby": "LOBBY",
+      "playing": "PLAYING",
+      "voting": "VOTING",
+      "finished": "FINISHED"
+    }
+  },
+  "errors": {
+    "room_not_found": "Room not found",
+    "player_name_required": "Player name is required",
+    "room_full": "Room is full",
+    "game_already_started": "Game has already started",
+    "not_host": "Only the host can perform this action",
+    "not_your_turn": "It's not your turn",
+    "invalid_card": "Invalid card type",
+    "already_voted": "You have already voted",
+    "not_enough_players": "Not enough players to start",
+    "profession_first": "You must reveal your profession first",
+    "card_already_revealed": "This card is already revealed",
+    "kicked": "You were kicked from the room by the host",
+    "generic": "An error occurred"
+  },
+  "common": {
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  }
+}
