@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -6,14 +6,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build for production
+# Build the application
 RUN npm run build
 
-# Start the application
-EXPOSE 3000
-CMD ["node", ".output/server/index.mjs"]
+# Expose port
+EXPOSE 3001
+
+# Start the server
+CMD ["npm", "start"]
