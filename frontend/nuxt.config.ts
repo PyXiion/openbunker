@@ -50,6 +50,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       wsUrl: process.env.WS_URL || 'http://localhost:3001'
-    }
+    },
+    // Private config (server-side only)
+    wsUrl: process.env.WS_URL || 'http://localhost:3001'
   }
 })
