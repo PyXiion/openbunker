@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -6,16 +6,14 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build for production
 RUN npm run build
 
-# Expose port
-EXPOSE 3001
-
-# Start the server
-CMD ["npm", "start"]
+# Start the application
+EXPOSE 3000
+CMD ["npx", "nuxt", "start"]
