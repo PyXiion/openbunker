@@ -6,16 +6,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Data loader function to support multiple languages
-function loadData<T>(dataType: 'catastrophes' | 'traits' | 'bunker', language: string = 'en'): T {
+function loadData<T>(dataType: 'catastrophes' | 'traits' | 'bunker' | 'messages', language: string = 'en'): T {
   const filePath = path.join(__dirname, 'data', `${dataType}-${language}.json`);
   
   // Fallback to English if requested language file doesn't exist
   if (!fs.existsSync(filePath)) {
     const fallbackPath = path.join(__dirname, 'data', `${dataType}-en.json`);
-    return JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
+    try {
+      return JSON.parse(fs.readFileSync(fallbackPath, 'utf-8'));
+    } catch (error) {
+      console.error(`Failed to parse fallback file ${fallbackPath}:`, error);
+      throw new Error(`Failed to load ${dataType} data`);
+    }
   }
   
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch (error) {
+    console.error(`Failed to parse file ${filePath}:`, error);
+    throw new Error(`Failed to load ${dataType} data`);
+  }
 }
 
 function getCatastrophes(language: string = 'en'): CatastropheCard[] {
@@ -28,6 +38,10 @@ function getBunkerRooms(language: string = 'en'): BunkerRoom[] {
 
 function getTraits(language: string = 'en'): Record<TraitType, Array<{id: string; name: string; description: string}>> {
   return loadData<Record<TraitType, Array<{id: string; name: string; description: string}>>>('traits', language);
+}
+
+function getMessages(language: string = 'en'): Record<string, any> {
+  return loadData<Record<string, any>>('messages', language);
 }
 
 export class GameLogic {
@@ -653,7 +667,13 @@ export class GameLogic {
 
     // 1. Deep clone the room structure so we don't mutate the master state
     // Using JSON parse/stringify is a quick way to deep clone plain objects
-    const maskedRoom = JSON.parse(JSON.stringify(room));
+    let maskedRoom: any;
+    try {
+      maskedRoom = JSON.parse(JSON.stringify(room));
+    } catch (error) {
+      console.error('Failed to clone room data:', error);
+      return null;
+    }
     
     // 2. Clear the players list so we can rebuild it with masked data
     maskedRoom.players = {};
@@ -661,12 +681,23 @@ export class GameLogic {
     for (const [id, player] of Object.entries(room.players)) {
       // If game is over, or it's the player's own profile, don't mask
       if (room.status === 'FINISHED' || id === playerId) {
-        maskedRoom.players[id] = JSON.parse(JSON.stringify(player));
+        try {
+          maskedRoom.players[id] = JSON.parse(JSON.stringify(player));
+        } catch (error) {
+          console.error('Failed to clone player data:', error);
+          maskedRoom.players[id] = player;
+        }
         continue;
       }
 
       // 3. Mask other players' traits
-      const maskedPlayer = JSON.parse(JSON.stringify(player));
+      let maskedPlayer: any;
+      try {
+        maskedPlayer = JSON.parse(JSON.stringify(player));
+      } catch (error) {
+        console.error('Failed to clone player data for masking:', error);
+        maskedPlayer = player;
+      }
       const traitTypes: TraitType[] = ['profession', 'biology', 'hobby', 'phobia', 'baggage', 'fact'];
 
       for (const traitType of traitTypes) {
@@ -763,11 +794,50 @@ export class GameLogic {
   }
 
   /**
+   * Adds a localized system event message to the chat history.
+   */
+  addLocalizedSystemEvent(
+    roomId: string,
+    eventType: ChatEventType,
+    messageKey: string,
+    params?: Record<string, any>,
+    eventData?: Record<string, any>
+  ): ChatMessage | null {
+    const message = this.getLocalizedMessage(roomId, messageKey, params);
+    return this.addSystemEvent(roomId, eventType, message, eventData);
+  }
+
+  /**
    * Gets the chat history for a room.
    */
   getChatHistory(roomId: string): ChatMessage[] {
     const room = this.rooms.get(roomId);
     if (!room) return [];
     return room.chatHistory;
+  }
+
+  /**
+   * Gets a localized message with parameter interpolation.
+   */
+  getLocalizedMessage(roomId: string, key: string, params?: Record<string, any>): string {
+    const room = this.rooms.get(roomId);
+    if (!room) return key;
+    
+    const messages = getMessages(room.language || 'en');
+    const messageTemplate = this.getNestedValue(messages, key) || key;
+    
+    if (!params) return messageTemplate;
+    
+    // Replace parameters in the template (e.g., {playerName} -> actual name)
+    return messageTemplate.replace(/\{(\w+)\}/g, (match, paramKey) => {
+      return params[paramKey] !== undefined ? String(params[paramKey]) : match;
+    });
+  }
+
+  /**
+   * Helper to get nested object values by dot notation.
+   */
+  private getNestedValue(obj: any, key: string): string {
+    return key.split('.').reduce((current, prop) => current?.[prop], obj) || '';
   }
 }

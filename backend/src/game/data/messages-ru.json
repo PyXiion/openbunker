@@ -1,0 +1,18 @@
+{
+  "welcome": {
+    "title": "Добро пожаловать в игру!",
+    "message": "Для лучшей игры лучше общаться через войс-чат. Заходите на наш [Discord-сервер](https://discord.gg/KpAMMCdcrJ), где есть голосовые каналы и можно найти напарников для игры!"
+  },
+
+  "events": {
+    "game_started": "Игра началась!",
+    "player_joined": "{playerName} зашел в комнату",
+    "player_left": "{playerName} покинул комнату",
+    "player_kicked": "{playerName} был исключен из комнаты",
+    "player_exiled": "{playerName} был изгнан",
+    "round_started": "Начался раунд {round}",
+    "game_finished": "Игра окончена! В бункере осталось выживших: {survivors}.",
+    "bunker_room_revealed": "Открыта новая локация бункера: {roomName}",
+    "host_changed": "{newHostName} теперь является хостом"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "welcome": {
+    "title": "Welcome to the game!",
+    "message": "It's recommended to use voice channels for better communication. Join our [Discord](https://discord.gg/KpAMMCdcrJ) server where you can use dedicated voice channels and find other players to play with!"
+  },
+  "events": {
+    "game_started": "The game has started!",
+    "player_joined": "{playerName} joined the room",
+    "player_left": "{playerName} left the room",
+    "player_kicked": "{playerName} was kicked from the room",
+    "player_exiled": "{playerName} was exiled",
+    "round_started": "Round {round} has started",
+    "game_finished": "Game over! {survivors} survivors remain in the bunker.",
+    "bunker_room_revealed": "New bunker room revealed: {roomName}",
+    "host_changed": "{newHostName} is now the host"
+  }
+}

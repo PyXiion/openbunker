@@ -101,18 +101,14 @@ export class SocketHandlers {
       }
     }
 
-    if (!player) {
-      // Log player join event
-      if (player) {
-        const eventMessage = this.gameLogic.addSystemEvent(
-          roomId,
-          'PLAYER_JOIN',
-          `${playerName} joined the room`,
-          { playerId: persistentId, playerName }
-        );
-        this.broadcastChatMessage(roomId, eventMessage);
-      }
-    }
+    // Log player join event
+    const eventMessage = this.gameLogic.addSystemEvent(
+      roomId,
+      'PLAYER_JOIN',
+      `${playerName} joined the room`,
+      { playerId: persistentId, playerName }
+    );
+    this.broadcastChatMessage(roomId, eventMessage);
 
     this.gameLogic.checkHostOwnershipTTL(roomId);    
     this.broadcastRoomState(roomId);
@@ -166,13 +162,27 @@ export class SocketHandlers {
     console.log('Game started successfully, broadcasting room state');
     
     // Log game start event
-    const eventMessage = this.gameLogic.addSystemEvent(
+    const eventMessage = this.gameLogic.addLocalizedSystemEvent(
       roomId,
       'GAME_STARTED',
-      'The game has started!',
+      'events.game_started',
+      { round: 1 },
       { round: 1 }
     );
     this.broadcastChatMessage(roomId, eventMessage);
+
+    // Add welcome message
+    const welcomeTitle = this.gameLogic.getLocalizedMessage(roomId, 'welcome.title');
+    const welcomeMessage = this.gameLogic.getLocalizedMessage(roomId, 'welcome.message');
+    const fullWelcomeMessage = `${welcomeTitle} ${welcomeMessage}`;
+    
+    const welcomeChatMessage = this.gameLogic.addSystemEvent(
+      roomId,
+      'GAME_STARTED',
+      fullWelcomeMessage,
+      { type: 'welcome' }
+    );
+    this.broadcastChatMessage(roomId, welcomeChatMessage);
 
     this.broadcastRoomState(roomId);
   }

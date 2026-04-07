@@ -32,12 +32,10 @@
       />
 
       <!-- Chat Box -->
-      <div class="fixed bottom-4 right-4 w-80 z-50">
-        <ChatBox 
-          v-if="gameStore.room" 
-          :room-id="gameStore.room.roomId" 
-        />
-      </div>
+      <ChatBox 
+        v-if="gameStore.room" 
+        :room-id="gameStore.room.roomId" 
+      />
     </div>
   </div>
 </template>
