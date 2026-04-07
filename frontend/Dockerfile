@@ -16,4 +16,4 @@ RUN npm run build
 
 # Start the application
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["nuxt", "start"]
