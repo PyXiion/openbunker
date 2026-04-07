@@ -587,8 +587,34 @@ export class GameLogic {
     }
 
     console.log(`Removing player ${player.name} (${playerId}) from room ${roomId}`);
+    
+    // Find the player's index in turn order before removing them
+    const playerTurnIndex = room.turnOrder.indexOf(playerId);
+    
     delete room.players[playerId];
     room.turnOrder = room.turnOrder.filter(id => id !== playerId);
+
+    // Adjust currentTurnIndex if necessary
+    if (playerTurnIndex === room.currentTurnIndex && room.turnOrder.length > 0) {
+      // The removed player was the current player, find next non-exiled player
+      let nextIndex = room.currentTurnIndex;
+      if (nextIndex >= room.turnOrder.length) {
+        nextIndex = 0; // Wrap around if we were at the end
+      }
+      
+      // Find next non-exiled player
+      do {
+        nextIndex = (nextIndex + 1) % room.turnOrder.length;
+      } while (room.players[room.turnOrder[nextIndex]].isExiled && nextIndex !== room.currentTurnIndex);
+      
+      room.currentTurnIndex = nextIndex;
+    } else if (playerTurnIndex !== -1 && playerTurnIndex < room.currentTurnIndex) {
+      // The removed player was before the current player, so shift the index back
+      room.currentTurnIndex--;
+    } else if (playerTurnIndex === room.currentTurnIndex && room.currentTurnIndex >= room.turnOrder.length) {
+      // The removed player was the current player and was at the end of the list
+      room.currentTurnIndex = 0;
+    }
 
     // If host leaves, handle host ownership transfer
     if (player.isHost && room.turnOrder.length > 0) {
