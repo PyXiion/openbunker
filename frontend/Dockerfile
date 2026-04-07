@@ -11,14 +11,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Generate static files
-RUN npm run generate
+# Build for production
+RUN npm run build
 
-# Use nginx to serve the static files
-FROM nginx:alpine
-COPY --from=0 /app/.output/public /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Start the application
+EXPOSE 3000
+CMD ["npm", "start"]
