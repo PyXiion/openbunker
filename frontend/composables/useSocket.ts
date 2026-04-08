@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { useGameStore } from '~/stores/game';
 import { useRuntimeConfig } from '#app/nuxt';
 import { useI18n, navigateTo } from '#imports';
+import { useAuth } from './useAuth';
 import type { CreateRoomSettings, UpdateRoomSettings } from '~/types/settings';
 import path from 'path';
 
@@ -30,14 +31,42 @@ export const useSocket = () => {
       return;
     }
 
+    const auth = useAuth();
     console.log('Creating new socket connection...');
+    
+    // Prepare authentication data
+    let authData: any = {};
+    
+    if (auth.isAuthenticated()) {
+      // Authenticated user - use JWT token
+      const token = auth.getAuthToken();
+      if (token) {
+        authData.token = token;
+      }
+    } else if (auth.isGuest()) {
+      // Guest user - use guest credentials
+      const guestUser = auth.getGuestUser();
+      if (guestUser) {
+        authData.guest = {
+          userId: guestUser.userId,
+          username: guestUser.username,
+          isGuest: true,
+        };
+      }
+    }
+
+    if (!authData.token && !authData.guest) {
+      console.warn('No authentication available for socket connection');
+      return;
+    }
+
     globalSocket = io(config.public.wsUrl, {
       autoConnect: true,
       forceNew: true,
       transports: ['websocket'],
-      path: config.public.wsPath
-    },
-    );
+      path: config.public.wsPath,
+      auth: authData, // Use auth option for secure handshake
+    });
 
     globalSocket.on('connect', () => {
       console.log('Socket connected with ID:', globalSocket!.id);
@@ -47,21 +76,12 @@ export const useSocket = () => {
       // If we have persisted room data, attempt to rejoin
       const savedRoom = localStorage.getItem('gameRoom');
       const savedPlayerName = localStorage.getItem('playerName');
-      const savedPersistentId = localStorage.getItem('persistentId');
       
       if (savedRoom && savedPlayerName && !isJoiningRoom) {
         try {
           const room = JSON.parse(savedRoom);
-          
-          // Use saved persistentId if available, otherwise get from store
-          const persistentId = savedPersistentId || gameStore.getOrCreatePersistentId();
-          
-          if (persistentId) {
-            console.log('Attempting to rejoin room:', room.roomId, 'with persistentId:', persistentId);
-            globalSocket!.emit('JOIN_ROOM', { roomId: room.roomId, playerName: savedPlayerName, persistentId });
-          } else {
-            console.warn('No persistentId available for reconnection');
-          }
+          console.log('Attempting to rejoin room:', room.roomId, 'as', savedPlayerName);
+          globalSocket!.emit('JOIN_ROOM', { roomId: room.roomId, playerName: savedPlayerName });
         } catch (error) {
           console.error('Failed to parse saved room data:', error);
         }
@@ -91,9 +111,13 @@ export const useSocket = () => {
 
     globalSocket.on('ROOM_CREATED', (data) => {
       console.log('Room created:', data.roomId);
-      // Save persistentId from server response
-      if (data.persistentId) {
-        gameStore.setPersistentId(data.persistentId);
+      // Save userId from server response
+      if (data.userId) {
+        gameStore.setPlayerId(data.userId);
+      }
+      // Store guest status for UI
+      if (data.isGuest !== undefined) {
+        gameStore.setIsGuest(data.isGuest);
       }
       // Player ID will be set when ROOM_STATE_UPDATE arrives
       isJoiningRoom = false; // Reset join flag
@@ -160,9 +184,7 @@ export const useSocket = () => {
 
   const createRoom = (playerName: string, settings?: CreateRoomSettings) => {
     if (!globalSocket) return;
-    const persistentId = gameStore.getOrCreatePersistentId();
-
-    globalSocket.emit('CREATE_ROOM', { playerName, persistentId, language: locale.value, settings });
+    globalSocket.emit('CREATE_ROOM', { playerName, language: locale.value, settings });
   };
 
   /**
@@ -177,13 +199,10 @@ export const useSocket = () => {
       return;
     }
     
-    // Get persistent ID if available (for rejoining), server will create new one if not
-    const persistentId = gameStore.getOrCreatePersistentId();
-    
     isJoiningRoom = true;
-    console.log('Joining room with persistent ID:', persistentId);
+    console.log('Joining room:', roomId, 'as', playerName);
     
-    globalSocket.emit('JOIN_ROOM', { roomId, playerName, persistentId });
+    globalSocket.emit('JOIN_ROOM', { roomId, playerName });
     
     // Reset flag after a timeout to prevent permanent blocking
     setTimeout(() => {

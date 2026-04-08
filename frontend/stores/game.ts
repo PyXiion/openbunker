@@ -53,6 +53,7 @@ export const useGameStore = defineStore('game', {
     playerId: null as string | null,
     playerName: null as string | null,
     persistentId: null as string | null,
+    isGuest: null as boolean | null,
     connected: false,
     error: null as string | null,
     kickedMessage: null as string | null,
@@ -202,12 +203,17 @@ export const useGameStore = defineStore('game', {
       this.kickedMessage = message;
     },
 
+    setIsGuest(isGuest: boolean) {
+      this.isGuest = isGuest;
+    },
+
     reset() {
       this.room = null;
       this.playerId = null;
       this.chatHistory = [];
       // Keep playerName for reuse on next game
       this.persistentId = null;
+      this.isGuest = null;
       this.connected = false;
       this.error = null;
       localStorage.removeItem('gameRoom');
@@ -222,6 +228,7 @@ export const useGameStore = defineStore('game', {
       this.playerId = null;
       this.error = null;
       this.chatHistory = [];
+      this.isGuest = null;
       localStorage.removeItem('gameRoom');
       localStorage.removeItem('playerId');
       // Keep playerName, persistentId, and connected status

@@ -51,6 +51,9 @@ export default defineNuxtConfig({
     public: {
       wsUrl: 'http://localhost:3001',
       wsPath: '/socket.io/',
+      backendUrl: 'http://localhost:3001',
+      zitadelUrl: 'http://localhost:8080',
+      zitadelClientId: 'bunker-frontend',
     }
   }
 })

@@ -3,6 +3,8 @@ import { GameLogic } from '../game/gameLogic';
 import { TraitType, ChatMessage } from '../game/types';
 import { CreateRoomSettings, UpdateRoomSettings, SettingsValidator } from '../types';
 import { filterChatMessage } from '../utils/contentFilter';
+import { AuthenticatedSocket, requireAuthentication, requireRoomAccess, isGuest } from '../auth/middleware';
+import { recordGameHistory } from '../auth/database';
 
 export class SocketHandlers {
   /**
@@ -19,14 +21,15 @@ export class SocketHandlers {
    * Called once per client connection.
    */
   handleConnection(socket: Socket): void {
-    console.log(`Player connected: ${socket.id}`);
+    const authSocket = socket as AuthenticatedSocket;
+    console.log(`Player connected: ${socket.id} (User: ${authSocket.userId}, Guest: ${isGuest(socket)})`);
 
-    socket.on('JOIN_ROOM', (data: { roomId: string; playerName: string; persistentId?: string }) => {
-      this.handleJoinRoom(socket, data.roomId, data.playerName, data.persistentId);
+    socket.on('JOIN_ROOM', (data: { roomId: string; playerName: string }) => {
+      this.handleJoinRoom(socket, data.roomId, data.playerName);
     });
 
-    socket.on('CREATE_ROOM', (data: { playerName: string; persistentId?: string; language?: string; settings?: CreateRoomSettings }) => {
-      this.handleCreateRoom(socket, data.playerName, data.persistentId, data.language, data.settings);
+    socket.on('CREATE_ROOM', (data: { playerName: string; language?: string; settings?: CreateRoomSettings }) => {
+      this.handleCreateRoom(socket, data.playerName, data.language, data.settings);
     });
 
     socket.on('START_GAME', (data: { roomId: string }) => {
@@ -75,116 +78,137 @@ export class SocketHandlers {
    * Supports reconnection: cancels pending removal if player reconnects within grace period.
    * Stores player data in socket.data for later reference.
    */
-  private handleJoinRoom(socket: Socket, roomId: string, playerName: string, persistentId?: string): void {
-    const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, persistentId);
-    
-    if (!room) {
-      socket.emit('JOIN_ERROR', { message: 'Failed to join room' });
-      return;
-    }
-
-    socket.join(roomId);
-    socket.data.roomId = roomId;
-
-    // FIX: Find the player by the socketId we just assigned them in gameLogic
-    const player = Object.values(room.players).find(p => p.socketId === socket.id);
-    if (player) {
-      socket.data.playerId = player.id; 
-      socket.data.playerName = player.name;
+  private handleJoinRoom(socket: Socket, roomId: string, playerName: string): void {
+    try {
+      const authSocket = requireRoomAccess(socket, roomId);
       
-      // Cancel any pending removal timeout for this player
-      const existingTimeout = this.pendingRemovals.get(player.id);
-      if (existingTimeout) {
-        console.log(`Cancelling pending removal timeout for reconnected player ${player.id}`);
-        clearTimeout(existingTimeout);
-        this.pendingRemovals.delete(player.id);
+      const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId);
+      
+      if (!room) {
+        socket.emit('JOIN_ERROR', { message: 'Failed to join room' });
+        return;
       }
+
+      socket.join(roomId);
+      socket.data.roomId = roomId;
+
+      // FIX: Find the player by the socketId we just assigned them in gameLogic
+      const player = Object.values(room.players).find(p => p.socketId === socket.id);
+      if (player) {
+        socket.data.playerId = player.id; 
+        socket.data.playerName = player.name;
+        
+        // Cancel any pending removal timeout for this player
+        const existingTimeout = this.pendingRemovals.get(player.id);
+        if (existingTimeout) {
+          console.log(`Cancelling pending removal timeout for reconnected player ${player.id}`);
+          clearTimeout(existingTimeout);
+          this.pendingRemovals.delete(player.id);
+        }
+      }
+
+      // Log player join event
+      const eventMessage = this.gameLogic.addSystemEvent(
+        roomId,
+        'PLAYER_JOIN',
+        `${playerName} joined the room`,
+        { playerId: authSocket.userId, playerName }
+      );
+      this.broadcastChatMessage(roomId, eventMessage);
+
+      this.gameLogic.checkHostOwnershipTTL(roomId);    
+      this.broadcastRoomState(roomId);
+    } catch (error) {
+      console.error('Join room error:', error);
+      socket.emit('JOIN_ERROR', { message: 'Authentication failed' });
     }
-
-    // Log player join event
-    const eventMessage = this.gameLogic.addSystemEvent(
-      roomId,
-      'PLAYER_JOIN',
-      `${playerName} joined the room`,
-      { playerId: persistentId, playerName }
-    );
-    this.broadcastChatMessage(roomId, eventMessage);
-
-    this.gameLogic.checkHostOwnershipTTL(roomId);    
-    this.broadcastRoomState(roomId);
   }
 
-  private handleCreateRoom(socket: Socket, playerName: string, persistentId?: string, language?: string, settings?: CreateRoomSettings): void {
-    // Validate and convert settings using the validator
-    const validatedSettings = settings ? SettingsValidator.validateSettings(settings) : undefined;
-    
-    const room = this.gameLogic.createRoom(socket.id, playerName, persistentId, language || 'en', validatedSettings);
-    
-    socket.join(room.roomId);
-    socket.data.roomId = room.roomId;
-    socket.data.playerName = playerName;
+  private handleCreateRoom(socket: Socket, playerName: string, language?: string, settings?: CreateRoomSettings): void {
+    try {
+      const authSocket = requireAuthentication(socket);
+      
+      // Validate and convert settings using the validator
+      const validatedSettings = settings ? SettingsValidator.validateSettings(settings) : undefined;
+      
+      const room = this.gameLogic.createRoom(socket.id, playerName, authSocket.userId, language || 'en', validatedSettings);
+      
+      socket.join(room.roomId);
+      socket.data.roomId = room.roomId;
+      socket.data.playerName = playerName;
 
-    const host = Object.values(room.players).find(p => p.isHost);
-    if (host) {
-      socket.data.playerId = host.id; // Store the UUID
+      const host = Object.values(room.players).find(p => p.isHost);
+      if (host) {
+        socket.data.playerId = host.id; // Store the UUID
+      }
+
+      // Return the host's userId to the client
+      socket.emit('ROOM_CREATED', { roomId: room.roomId, userId: authSocket.userId, isGuest: isGuest(socket) });
+      this.broadcastRoomState(room.roomId);
+    } catch (error) {
+      console.error('Create room error:', error);
+      socket.emit('ERROR', { message: 'Authentication failed' });
     }
-
-    // Return the host's persistentId to the client
-    socket.emit('ROOM_CREATED', { roomId: room.roomId, persistentId: host?.id });
-    this.broadcastRoomState(room.roomId);
   }
 
   private handleStartGame(socket: Socket, roomId: string): void {
-    console.log('handleStartGame called with roomId:', roomId);
-    console.log('socket.id:', socket.id);
-    
-    const room = this.gameLogic.getRoom(roomId);
-    console.log('room exists:', !!room);
-    console.log('room status:', room?.status);
-    
-    // Find player by socketId to check if they're host
-    const player = Object.values(room?.players || {}).find(p => p.socketId === socket.id);
-    if (!room || !player?.isHost) {
-      console.log('Failed: Room not found or player not host');
-      socket.emit('ERROR', { message: 'Only host can start the game' });
-      return;
+    try {
+      const authSocket = requireRoomAccess(socket, roomId);
+      
+      console.log('handleStartGame called with roomId:', roomId);
+      console.log('socket.id:', socket.id);
+      
+      const room = this.gameLogic.getRoom(roomId);
+      console.log('room exists:', !!room);
+      console.log('room status:', room?.status);
+      
+      // Find player by socketId to check if they're host
+      const player = Object.values(room?.players || {}).find(p => p.socketId === socket.id);
+      if (!room || !player?.isHost) {
+        console.log('Failed: Room not found or player not host');
+        socket.emit('ERROR', { message: 'Only host can start the game' });
+        return;
+      }
+
+      const success = this.gameLogic.startGame(roomId);
+      console.log('startGame success:', success);
+      
+      if (!success) {
+        console.log('GameLogic.startGame failed');
+        socket.emit('ERROR', { message: 'Failed to start game' });
+        return;
+      }
+
+      console.log('Game started successfully, broadcasting room state');
+      
+      // Log game start event
+      const eventMessage = this.gameLogic.addLocalizedSystemEvent(
+        roomId,
+        'GAME_STARTED',
+        'events.game_started',
+        { round: 1 },
+        { round: 1 }
+      );
+      this.broadcastChatMessage(roomId, eventMessage);
+
+      // Add welcome message
+      const welcomeTitle = this.gameLogic.getLocalizedMessage(roomId, 'welcome.title');
+      const welcomeMessage = this.gameLogic.getLocalizedMessage(roomId, 'welcome.message');
+      const fullWelcomeMessage = `${welcomeTitle} ${welcomeMessage}`;
+      
+      const welcomeChatMessage = this.gameLogic.addSystemEvent(
+        roomId,
+        'GAME_STARTED',
+        fullWelcomeMessage,
+        { type: 'welcome' }
+      );
+      this.broadcastChatMessage(roomId, welcomeChatMessage);
+
+      this.broadcastRoomState(roomId);
+    } catch (error) {
+      console.error('Start game error:', error);
+      socket.emit('ERROR', { message: 'Authentication failed' });
     }
-
-    const success = this.gameLogic.startGame(roomId);
-    console.log('startGame success:', success);
-    
-    if (!success) {
-      console.log('GameLogic.startGame failed');
-      socket.emit('ERROR', { message: 'Failed to start game' });
-      return;
-    }
-
-    console.log('Game started successfully, broadcasting room state');
-    
-    // Log game start event
-    const eventMessage = this.gameLogic.addLocalizedSystemEvent(
-      roomId,
-      'GAME_STARTED',
-      'events.game_started',
-      { round: 1 },
-      { round: 1 }
-    );
-    this.broadcastChatMessage(roomId, eventMessage);
-
-    // Add welcome message
-    const welcomeTitle = this.gameLogic.getLocalizedMessage(roomId, 'welcome.title');
-    const welcomeMessage = this.gameLogic.getLocalizedMessage(roomId, 'welcome.message');
-    const fullWelcomeMessage = `${welcomeTitle} ${welcomeMessage}`;
-    
-    const welcomeChatMessage = this.gameLogic.addSystemEvent(
-      roomId,
-      'GAME_STARTED',
-      fullWelcomeMessage,
-      { type: 'welcome' }
-    );
-    this.broadcastChatMessage(roomId, welcomeChatMessage);
-
-    this.broadcastRoomState(roomId);
   }
 
   private handleRevealCard(socket: Socket, roomId: string, traitType: string): void {

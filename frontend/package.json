@@ -20,6 +20,7 @@
     "markdown-it": "^14.1.1",
     "marked": "^18.0.0",
     "nuxt": "^3.8.0",
+    "oidc-client-ts": "^3.0.1",
     "pinia": "^2.1.7",
     "socket.io-client": "^4.7.4"
   },
