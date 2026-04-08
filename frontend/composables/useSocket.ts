@@ -3,6 +3,7 @@ import { useGameStore } from '~/stores/game';
 import { useRuntimeConfig } from '#app/nuxt';
 import { useI18n, navigateTo } from '#imports';
 import type { CreateRoomSettings, UpdateRoomSettings } from '~/types/settings';
+import path from 'path';
 
 // Global socket instance that persists across composable calls
 let globalSocket: Socket | null = null;
@@ -33,8 +34,10 @@ export const useSocket = () => {
     globalSocket = io(config.public.wsUrl, {
       autoConnect: true,
       forceNew: true,
-      transports: ['websocket']
-    });
+      transports: ['websocket'],
+      path: config.public.wsPath
+    },
+    );
 
     globalSocket.on('connect', () => {
       console.log('Socket connected with ID:', globalSocket!.id);

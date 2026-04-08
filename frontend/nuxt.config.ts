@@ -49,7 +49,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      wsUrl: 'http://localhost:3001' // Default if env is missing
+      wsUrl: 'http://localhost:3001',
+      wsPath: '/socket.io/',
     }
   }
 })
