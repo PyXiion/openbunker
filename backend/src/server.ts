@@ -8,6 +8,7 @@ import { GameLogic } from './game/gameLogic';
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
+  path: process.env.WS_PATH,
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     methods: ["GET", "POST"]

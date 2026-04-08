@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      target: production
     ports:
       - "3001:3001"
     environment:
@@ -8,15 +10,17 @@ services:
       - FRONTEND_URL=http://localhost:3000
     networks:
       - bunker-network
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: production
     ports:
       - "3000:80"
-    depends_on:
-      - backend
     networks:
       - bunker-network
+    restart: unless-stopped
 
 networks:
   bunker-network:
