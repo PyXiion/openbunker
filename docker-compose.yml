@@ -8,6 +8,7 @@ services:
     environment:
       - NODE_ENV=production
       - FRONTEND_URL=http://localhost:3000
+      - WS_PATH=/socket.io/
     networks:
       - bunker-network
     restart: unless-stopped
@@ -18,6 +19,8 @@ services:
       target: production
     ports:
       - "3000:80"
+    environment:
+      - WS_PATH=/socket.io/
     networks:
       - bunker-network
     restart: unless-stopped
