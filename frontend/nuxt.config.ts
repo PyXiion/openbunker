@@ -1,11 +1,33 @@
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import { readFileSync } from 'fs'
 
 // Load .env file from project root
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 dotenv.config({ path: join(__dirname, '..', '.env') })
+
+// Load generated config
+let generatedConfig: any = null;
+try {
+  const configPath = join(__dirname, 'config', 'generated.json');
+  console.log(`[CONFIG] Loading generated config from ${configPath}`);
+  generatedConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
+  console.log(`[CONFIG] Generated config loaded: ${JSON.stringify(generatedConfig, null, 2)}`);
+} catch (error) {
+  console.warn('[CONFIG] Failed to load generated config, using defaults');
+  generatedConfig = {
+    game: {
+      min_players: 2,
+      max_players: 12,
+    },
+    social: {
+      telegram_url: 'https://t.me/PyXiion_channel',
+      discord_url: 'https://discord.gg/KpAMMCdcrJ',
+    },
+  };
+}
 
 export default defineNuxtConfig({
   devtools: { enabled: false },
@@ -13,6 +35,12 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@nuxtjs/i18n'
+  ],
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false
+    }
   ],
   css: ['~/assets/css/main.css'],
   app: {
@@ -58,13 +86,15 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      wsUrl: process.env.NUXT_PUBLIC_WS_URL || 'http://localhost:3001',
-      wsPath: process.env.NUXT_PUBLIC_WS_PATH || '/socket.io/',
-      backendUrl: process.env.NUXT_PUBLIC_BACKEND_URL || 'http://localhost:3001',
-      casdoorUrl: process.env.NUXT_PUBLIC_CASDOOR_URL || 'http://localhost:8000',
-      casdoorClientId: process.env.NUXT_PUBLIC_CASDOOR_CLIENT_ID || 'bunker-frontend',
-      casdoorAppName: process.env.NUXT_PUBLIC_CASDOOR_APP_NAME || 'bunker',
-      casdoorOrgName: process.env.NUXT_PUBLIC_CASDOOR_ORG_NAME || 'bunker',
+      wsUrl: process.env.WS_URL || 'http://localhost:3001',
+      wsPath: process.env.WS_PATH || '/socket.io/',
+      backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
+      casdoorUrl: process.env.CASDOOR_URL || 'http://localhost:8000',
+      casdoorClientId: process.env.CASDOOR_CLIENT_ID || 'bunker-frontend',
+      casdoorAppName: process.env.CASDOOR_APP_NAME || 'bunker',
+      casdoorOrgName: process.env.CASDOOR_ORG_NAME || 'bunker',
+      gameConfig: generatedConfig.game,
+      socialConfig: generatedConfig.social,
     }
   }
 })

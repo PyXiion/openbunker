@@ -68,10 +68,18 @@
       "firstTraitToReveal": "First trait to reveal",
       "anyTrait": "Any",
       "enableContentFilter": "Enable content filter",
-      "autoCapacityHelp": "Automatically calculate bunker capacity based on player count (60% of players)",
-      "customCapacityHelp": "Set a custom bunker capacity. Must be between 1-10 places",
+      "autoCapacityHelp": "Automatically calculate bunker capacity based on player count",
+      "customCapacityHelp": "Set a custom bunker capacity. Must be between 2 and player count minus 1",
       "firstTraitHelp": "Force the first trait that players must reveal. 'Any' allows free choice",
-      "contentFilterHelp": "Filter inappropriate content in the chat"
+      "contentFilterHelp": "Filter inappropriate content in the chat",
+      "tabCapacity": "CAPACITY",
+      "tabRules": "RULES",
+      "tabInfo": "INFO",
+      "ready": "READY",
+      "waiting": "WAITING",
+      "markReady": "Mark as ready",
+      "markNotReady": "Mark as not ready",
+      "guest": "GUEST"
     },
     "tooltip": {
       "help": "HELP"

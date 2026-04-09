@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia';
-import { GAME_CONSTANTS } from '~/constants/game';
 import type { GameSettings } from '~/types/settings';
 import { applyDelta } from '~/utils/delta';
 
@@ -38,6 +37,8 @@ export interface Player {
   name: string;
   isHost: boolean;
   isExiled: boolean;
+  isReady: boolean;
+  isGuest: boolean;
   avatarUrl?: string;
   traits: {
     profession: any;
@@ -131,9 +132,11 @@ export const useGameStore = defineStore('game', {
     canStartGame: (state) => {
       if (!state.room) return false;
       const playerCount = Object.keys(state.room.players).length;
+      const config = useRuntimeConfig();
+      const minPlayers = config.public.gameConfig?.min_players || 2;
       return state.room.status === 'LOBBY' && 
              state.room.players[state.playerId!]?.isHost && 
-             playerCount >= GAME_CONSTANTS.MIN_PLAYERS_TO_START;
+             playerCount >= minPlayers;
     },
 
     /**

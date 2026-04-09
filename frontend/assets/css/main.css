@@ -17,8 +17,14 @@
 @layer components {
   .tech-button {
     @apply border-2 border-contrast bg-base px-4 py-2 font-bold text-contrast uppercase;
-    @apply hover:bg-contrast hover:text-base;
-    @apply active:translate-x-0.5 active:translate-y-0.5;
+    font-size: 0.875rem;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .tech-button:hover {
+    @apply bg-contrast;
+    color: var(--color-base, #f5f5f5);
+    border-color: var(--color-accent, #ff6600);
   }
   
   .tech-tile {
@@ -497,5 +503,191 @@
   .tui-menu-item.selected::before {
     content: '►';
     margin-right: 4px;
+  }
+
+  /* GameLobby Layout */
+  .gamelobby-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .gamelobby-layout {
+      grid-template-columns: 3fr 2fr;
+    }
+  }
+
+  .gamelobby-main {
+    min-height: 0;
+  }
+
+  .gamelobby-sidebar {
+    min-height: 0;
+  }
+
+  .gamelobby-footer {
+    border-top: 2px solid var(--color-contrast, #000000);
+    padding-top: 1rem;
+  }
+
+  /* Player Grid */
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .player-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .player-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .player-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  /* Player Card */
+  .player-card {
+    position: relative;
+  }
+
+  .player-card:hover {
+    background-color: var(--color-base, #f5f5f5);
+    color: var(--color-contrast, #000000);
+  }
+
+  .player-card-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .player-card-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--color-contrast, #000000);
+  }
+
+  .player-card-status.ready {
+    background-color: #22c55e;
+  }
+
+  .player-card-status.waiting {
+    background-color: #f97316;
+  }
+
+  .player-card-host-badge {
+    background-color: var(--color-accent, #ff6600);
+    color: var(--color-base, #f5f5f5);
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .player-card-guest-badge {
+    background-color: #6b7280;
+    color: var(--color-base, #f5f5f5);
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  /* Settings Tabs */
+  .settings-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--color-contrast, #000000);
+  }
+
+  .tab-button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: var(--color-contrast, #000000);
+    cursor: crosshair;
+    margin-bottom: -2px;
+  }
+
+  .tab-button:hover {
+    background: var(--color-contrast, #000000);
+    color: var(--color-base, #f5f5f5);
+  }
+
+  .tab-button.active {
+    border-bottom-color: var(--color-accent, #ff6600);
+    color: var(--color-accent, #ff6600);
+  }
+
+  .tab-content {
+    min-height: 150px;
+  }
+
+  /* Game Start Button */
+  .game-start-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.25rem;
+  }
+
+  .game-start-button.ready {
+    border-color: var(--color-accent, #ff6600);
+  }
+
+  .status-banner {
+    padding: 0.75rem;
+    border: 2px solid var(--color-contrast, #000000);
+    background: rgba(255, 102, 0, 0.1);
+  }
+
+  /* Mobile Adjustments */
+  @media (max-width: 767px) {
+    .gamelobby-layout {
+      gap: 0.75rem;
+    }
+
+    .player-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .player-card-avatar {
+      width: 40px;
+      height: 40px;
+    }
+
+    .settings-tabs {
+      font-size: 0.75rem;
+    }
+
+    .tab-button {
+      padding: 0.375rem 0.5rem;
+    }
+
+    .game-start-button {
+      padding: 0.75rem;
+      font-size: 1rem;
+    }
   }
 }

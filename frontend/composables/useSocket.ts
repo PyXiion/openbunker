@@ -10,6 +10,7 @@ import { applyDelta } from '~/utils/delta';
 // Global socket instance that persists across composable calls
 let globalSocket: Socket | null = null;
 let isJoiningRoom = false; // Prevent duplicate join requests
+let isConnecting = false; // Prevent duplicate connection attempts
 let connectionRetries = 0; // Track connection retries
 const MAX_RETRIES = 10; // Maximum retry attempts
 const INITIAL_RETRY_DELAY = 1000; // Initial retry delay in ms
@@ -36,19 +37,30 @@ export const useSocket = () => {
    * Reuses existing socket if already connected.
    */
   const connect = async () => {
-    // Disconnect existing socket if any to prevent memory leaks
+    // If socket instance already exists, don't create a new one
     if (globalSocket) {
-      logger.log('Socket already exists, disconnecting before reconnecting...');
-      globalSocket.disconnect();
-      globalSocket.removeAllListeners();
-      globalSocket = null;
+      if (globalSocket.connected) {
+        logger.log('Socket already connected, skipping reconnection');
+      } else {
+        logger.log('Socket instance exists but disconnected, skipping duplicate creation');
+      }
+      return;
     }
+
+    // If connection is already in progress, skip to prevent duplicate attempts
+    if (isConnecting) {
+      logger.log('Connection already in progress, skipping duplicate attempt');
+      return;
+    }
+
+    isConnecting = true;
 
     const auth = useAuth();
     
     // Wait for auth service to be available (client-side only)
     if (!import.meta.client) {
       logger.warn('Socket connection deferred - not available during SSR');
+      isConnecting = false;
       return;
     }
 
@@ -84,6 +96,7 @@ export const useSocket = () => {
 
     if (!authData.token && !authData.guest) {
       logger.log('No authentication available - socket will not connect');
+      isConnecting = false;
       return;
     }
 
@@ -92,17 +105,20 @@ export const useSocket = () => {
     logger.log('Socket authentication data prepared:', authData.token ? 'JWT token' : 'Guest credentials');
 
     globalSocket = io(config.public.wsUrl, {
-      autoConnect: true,
-      forceNew: true,
+      autoConnect: false,
       transports: ['websocket'],
       path: config.public.wsPath,
       auth: authData, // Use auth option for secure handshake
     });
 
+    // Manually connect the socket
+    globalSocket.connect();
+
     globalSocket.on('connect', () => {
       logger.log('Socket connected with ID:', globalSocket!.id);
       gameStore.setConnected(true);
       connectionRetries = 0; // Reset retry counter on successful connection
+      isConnecting = false; // Reset connection flag
       // Don't set playerId here - it will come from server in ROOM_STATE_UPDATE
 
       // If we have persisted room data, attempt to rejoin
@@ -120,23 +136,15 @@ export const useSocket = () => {
       }
     });
 
+    globalSocket.on('connect_error', (error) => {
+      logger.error('Socket connection error:', error);
+      isConnecting = false; // Reset connection flag on error
+    });
+
     globalSocket.on('disconnect', () => {
       logger.log('Socket disconnected in composable');
       gameStore.setConnected(false);
-
-      // Attempt to reconnect with exponential backoff
-      if (connectionRetries < MAX_RETRIES) {
-        const delay = getRetryDelay(connectionRetries);
-        logger.log(`Attempting to reconnect in ${delay}ms (attempt ${connectionRetries + 1}/${MAX_RETRIES})`);
-        setTimeout(() => {
-          connectionRetries++;
-          if (globalSocket && !globalSocket.connected) {
-            globalSocket.connect();
-          }
-        }, delay);
-      } else {
-        logger.error('Max reconnection attempts reached. Please refresh the page.');
-      }
+      isConnecting = false; // Reset connection flag
     });
 
     globalSocket.on('ROOM_STATE_UPDATE', (room) => {
@@ -327,6 +335,11 @@ export const useSocket = () => {
     globalSocket.emit('SEND_CHAT_MESSAGE', { roomId, message });
   };
 
+  const toggleReady = (roomId: string) => {
+    if (!globalSocket) return;
+    globalSocket.emit('TOGGLE_READY', { roomId });
+  };
+
   return {
     connect,
     disconnect,
@@ -340,6 +353,7 @@ export const useSocket = () => {
     kickPlayer,
     regenerateRoomCode,
     updateSettings,
-    sendChatMessage
+    sendChatMessage,
+    toggleReady
   };
 };
