@@ -7,7 +7,7 @@
       
       <div class="flex items-center gap-4">
         <a
-          href="https://t.me/PyXiion_channel"
+          :href="telegramUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="text-muted hover:text-contrast transition-colors"
@@ -19,7 +19,7 @@
         </a>
         
         <a
-          href="https://discord.gg/KpAMMCdcrJ"
+          :href="discordUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="text-muted hover:text-contrast transition-colors"
@@ -33,3 +33,9 @@
     </div>
   </footer>
 </template>
+
+<script setup lang="ts">
+const config = useRuntimeConfig();
+const telegramUrl = config.public.socialConfig?.telegram_url || 'https://t.me/PyXiion_channel';
+const discordUrl = config.public.socialConfig?.discord_url || 'https://discord.gg/KpAMMCdcrJ';
+</script>
