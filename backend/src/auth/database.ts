@@ -35,7 +35,7 @@ export function initializeDatabase(): Pool {
       database,
       user,
       password,
-      max: 20,
+      max: parseInt(process.env.DATABASE_POOL_SIZE || '50', 10),
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     });

@@ -2,8 +2,27 @@ import express from 'express';
 import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { createProfile, updateProfile, getProfile } from './database';
 import { logger } from '../utils/logger';
+import { z } from 'zod';
 
 const router = express.Router();
+
+// Validation schemas
+const guestAuthSchema = z.object({
+  username: z.string().min(1).max(50).trim()
+});
+
+const callbackSchema = z.object({
+  code: z.string().min(1)
+});
+
+const upgradeSchema = z.object({
+  shadowUserId: z.string().min(1),
+  realToken: z.string().min(1)
+});
+
+const usernameSchema = z.object({
+  username: z.string().min(1).max(50).trim()
+});
 
 // Initialize Casdoor SDK lazily to ensure environment variables are loaded
 let casdoorInstance: any = null;
@@ -46,22 +65,24 @@ function getCasdoor() {
 // Guest authentication endpoint
 router.post('/guest', async (req, res) => {
   try {
-    const { username } = req.body;
+    const result = guestAuthSchema.safeParse(req.body);
     
-    if (!username || username.trim().length === 0) {
-      return res.status(400).json({ error: 'Username is required' });
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid username', details: result.error.issues });
     }
+
+    const { username } = result.data;
 
     // Generate a guest user ID
     const guestUserId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
     res.json({
       userId: guestUserId,
-      username: username.trim(),
+      username,
       isGuest: true,
     });
   } catch (error) {
-    logger.error('Guest auth error:', error);
+    logger.error('Guest auth error:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -120,11 +141,13 @@ router.get('/profile', async (req, res) => {
 // OAuth callback endpoint - exchange code for token and sync with database
 router.post('/callback', async (req, res) => {
   try {
-    const { code } = req.body;
+    const result = callbackSchema.safeParse(req.body);
     
-    if (!code) {
-      return res.status(400).json({ error: 'Authorization code is required' });
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid authorization code', details: result.error.issues });
     }
+
+    const { code } = result.data;
 
     const casdoor = getCasdoor();
     const tokenResponse = await casdoor.getAuthToken(code);
@@ -186,11 +209,13 @@ router.post('/callback', async (req, res) => {
 // Link shadow user to real account (upgrade from guest)
 router.post('/upgrade', async (req, res) => {
   try {
-    const { shadowUserId, realToken } = req.body;
+    const result = upgradeSchema.safeParse(req.body);
     
-    if (!shadowUserId || !realToken) {
-      return res.status(400).json({ error: 'shadowUserId and realToken are required' });
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid upgrade data', details: result.error.issues });
     }
+
+    const { shadowUserId, realToken } = result.data;
 
     const casdoor = getCasdoor();
     const realUser = await casdoor.parseJwtToken(realToken);
@@ -220,15 +245,18 @@ router.post('/upgrade', async (req, res) => {
 router.put('/username', async (req, res) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
-    const { username } = req.body;
     
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
     
-    if (!username || username.trim().length === 0) {
-      return res.status(400).json({ error: 'Username is required' });
+    const result = usernameSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid username', details: result.error.issues });
     }
+
+    const { username } = result.data;
 
     const casdoor = getCasdoor();
     const user = await casdoor.parseJwtToken(token);

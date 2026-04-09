@@ -98,10 +98,29 @@ export class SocketHandlers {
         console.error('Failed to fetch profile for avatar:', error);
       }
       
+      // Check if room exists before attempting to join
+      const existingRoom = this.gameLogic.getRoom(roomId);
+      if (!existingRoom) {
+        socket.emit('JOIN_ERROR', { message: 'errors.room_not_found' });
+        return;
+      }
+      
+      // Check if room is in LOBBY state
+      if (existingRoom.status !== 'LOBBY') {
+        socket.emit('JOIN_ERROR', { message: 'errors.game_already_started' });
+        return;
+      }
+      
+      // Check if room is full
+      if (Object.keys(existingRoom.players).length >= 10) {
+        socket.emit('JOIN_ERROR', { message: 'errors.room_full' });
+        return;
+      }
+      
       const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId, avatarUrl);
       
       if (!room) {
-        socket.emit('JOIN_ERROR', { message: 'Failed to join room' });
+        socket.emit('JOIN_ERROR', { message: 'errors.generic' });
         return;
       }
 
