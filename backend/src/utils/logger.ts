@@ -31,13 +31,13 @@ const transports: winston.transport[] = [];
 // Single console transport with conditional level
 transports.push(
   new winston.transports.Console({
-    level: isDebug ? 'debug' : 'error',
+    level: 'info',
     format: consoleFormat
   })
 );
 
 export const logger = winston.createLogger({
-  level: isDebug ? 'debug' : 'error',
+  level: 'info',
   format: logFormat,
   transports,
 });
