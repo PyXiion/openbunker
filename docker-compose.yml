@@ -55,6 +55,11 @@ services:
       - CASDOOR_ENDPOINT=${CASDOOR_ENDPOINT:-http://casdoor:8000}
       - CASDOOR_CERT=${CASDOOR_CERT}
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bunker}
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${DATABASE_NAME:-bunker}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
     depends_on:
       - postgres
       - casdoor

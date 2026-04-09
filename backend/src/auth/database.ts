@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from 'pg';
+import { logger } from '../utils/logger';
 
 let pool: Pool;
 
@@ -28,6 +29,8 @@ export function initializeDatabase(): Pool {
     const database = process.env.DATABASE_NAME || 'bunker';
     const user = process.env.DATABASE_USER || 'postgres';
     const password = process.env.DATABASE_PASSWORD || 'postgres';
+
+    logger.info(`Initializing database connection: host=${host}, port=${port}, database=${database}, user=${user}`);
     
     pool = new Pool({
       host,
