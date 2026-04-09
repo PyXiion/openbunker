@@ -5,10 +5,12 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "BUNKER_CONFIG=../config.toml node scripts/generate-frontend-config.js && nuxt dev",
+    "dev:watch": "nodemon --watch ../config.toml --exec 'BUNKER_CONFIG=../config.toml node scripts/generate-frontend-config.js && nuxt dev'",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "prebuild": "BUNKER_CONFIG=../config.toml node scripts/generate-frontend-config.js"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.2.4",
@@ -25,8 +27,12 @@
     "socket.io-client": "^4.7.4"
   },
   "devDependencies": {
+    "@iarna/toml": "^2.2.5",
     "@nuxt/devtools": "latest",
     "@types/node": "^20.10.5",
+    "chokidar-cli": "^3.0.0",
+    "nodemon": "^3.0.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
 }

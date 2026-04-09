@@ -28,6 +28,9 @@ USER nodejs
 # Expose port
 EXPOSE 3000
 
+# Environment variable for config (can be overridden at runtime)
+ENV BUNKER_CONFIG=/app/config.toml
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
