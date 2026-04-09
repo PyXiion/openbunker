@@ -4,7 +4,7 @@
     <div class="col-span-2 space-y-4">
       <CatastropheCard :catastrophe="gameStore.room?.catastrophe || null" />
       
-      <BunkerStats 
+      <LazyBunkerStats 
         :bunker="gameStore.room?.bunker || null" 
         :active-player-count="gameStore.activePlayers.length"
       />

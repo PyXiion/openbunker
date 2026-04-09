@@ -4,42 +4,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import MarkdownIt from 'markdown-it/dist/markdown-it.min.js';
-import DOMPurify from 'dompurify';
-import { logger } from '~/utils/logger';
+import { useMarkdown } from '~/composables/useMarkdown';
 
 const props = defineProps<{
   content: string;
 }>();
 
-// Initialize markdown-it
-const md = new MarkdownIt({
-  html: false,        // Disable HTML tags
-  linkify: true,      // Autoconvert URL-like text to links
-  typographer: true,  // Enable some language-neutral replacement + quotes beautification
-  breaks: true,       // Convert '\n' to <br>
-});
+const { render } = useMarkdown();
 
-const renderedContent = computed(() => {
-  if (!props.content) return '';
-  
-  try {
-    // Render markdown to HTML
-    const html = md.render(props.content) as string;
-    
-    // Sanitize HTML to prevent XSS
-    const sanitized = DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'code', 'pre', 'a', 'ul', 'ol', 'li', 'blockquote', 'h1', 'h2', 'h3'],
-      ALLOWED_ATTR: ['href', 'target', 'rel'],
-      ALLOW_DATA_ATTR: false
-    });
-    
-    return sanitized;
-  } catch (error) {
-    logger.error('Markdown rendering error:', error);
-    return props.content; // Fallback to plain text
-  }
-});
+const renderedContent = computed(() => render(props.content));
 </script>
 
 <style scoped>

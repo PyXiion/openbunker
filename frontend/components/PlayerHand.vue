@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <PlayingCard
+    <LazyPlayingCard
       :visible="!!selectedCard"
       :position="cardPosition"
       :variant="selectedCard?.type || 'default'"

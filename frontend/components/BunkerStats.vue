@@ -49,7 +49,7 @@
     </div>
 
     <!-- Room Card Overlay -->
-    <PlayingCard
+    <LazyPlayingCard
       :visible="selectedRoom !== null"
       :position="cardPosition"
       variant="default"
@@ -108,27 +108,28 @@ const gridHeight = computed(() => {
   return Math.min(4, Math.max(2, Math.ceil(count / gridWidth.value)));
 });
 
-// Position rooms in spiral pattern
+// Position rooms in spiral pattern (memoized computed property)
 const displayedRooms = computed<DisplayedRoom[]>(() => {
   if (!props.bunker?.rooms?.length) return [];
-  
+
   const rooms = props.bunker.rooms;
-  const positions: { x: number; y: number }[] = [];
+  const roomCount = rooms.length;
   const w = gridWidth.value;
   const h = gridHeight.value;
   const centerX = Math.floor(w / 2);
   const centerY = Math.floor(h / 2);
-  
+
   // Spiral from center
+  const positions: { x: number; y: number }[] = [];
   positions.push({ x: centerX, y: centerY });
   const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
   let dirIdx = 0;
   let steps = 1;
   let x = centerX, y = centerY;
-  
-  while (positions.length < rooms.length) {
-    for (let rep = 0; rep < 2 && positions.length < rooms.length; rep++) {
-      for (let i = 0; i < steps && positions.length < rooms.length; i++) {
+
+  while (positions.length < roomCount) {
+    for (let rep = 0; rep < 2 && positions.length < roomCount; rep++) {
+      for (let i = 0; i < steps && positions.length < roomCount; i++) {
         x += directions[dirIdx][0];
         y += directions[dirIdx][1];
         if (x >= 0 && x < w && y >= 0 && y < h) {
@@ -139,7 +140,7 @@ const displayedRooms = computed<DisplayedRoom[]>(() => {
     }
     steps++;
   }
-  
+
   return rooms.map((room, i) => ({
     ...room,
     x: positions[i]?.x ?? 0,

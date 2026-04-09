@@ -120,19 +120,19 @@ const canSendMessage = computed(() =>
 );
 
 // Auto-scroll to bottom when new messages arrive
-watch(chatHistory, async (newHistory, oldHistory) => {
+watch(() => chatHistory.value.length, async (newLength, oldLength) => {
   await nextTick();
   scrollToBottom();
   
   // Increment unread count if collapsed and there's a new message
-  if (isCollapsed.value && newHistory.length > (oldHistory?.length || 0)) {
-    const newMessage = newHistory[newHistory.length - 1];
+  if (isCollapsed.value && newLength > (oldLength || 0)) {
+    const newMessage = chatHistory.value[chatHistory.value.length - 1];
     // Only count messages from other players (exclude own messages, system, and event messages)
     if (newMessage.playerId !== currentPlayerId.value && newMessage.type === 'CHAT') {
       unreadCount.value++;
     }
   }
-}, { deep: true });
+});
 
 onMounted(() => {
   scrollToBottom();
