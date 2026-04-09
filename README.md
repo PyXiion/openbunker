@@ -10,8 +10,10 @@ A multiplayer social deduction game where players debate their usefulness to sur
 |-----------|------------|
 | **Frontend** | Nuxt 3 + Vue 3 + TailwindCSS + Pinia |
 | **Backend** | Node.js + Express + Socket.io + TypeScript |
+| **Database** | PostgreSQL |
+| **Authentication** | Casdoor (SSO/OIDC) |
 | **Deployment** | Docker + Docker Compose |
-| **State Management** | Pinia (Frontend) + In-Memory (Backend) |
+| **State Management** | Pinia (Frontend) + PostgreSQL (Backend) |
 | **Real-time Communication** | Socket.io (WebSocket) |
 
 ## Project Structure
@@ -23,27 +25,39 @@ openbunker/
 │   │   ├── server.ts           # Express server & Socket.io setup
 │   │   ├── socket/
 │   │   │   └── handlers.ts     # Socket event handlers
-│   │   └── game/
-│   │       ├── gameLogic.ts    # Core game logic
-│   │       ├── types.ts        # TypeScript interfaces
-│   │       ├── constants.ts    # Game constants
-│   │       └── data/           # JSON data (catastrophes, traits, bunker)
+│   │   ├── auth/               # Authentication middleware & routes
+│   │   ├── game/               # Game logic
+│   │   │   ├── gameLogic.ts    # Core game logic
+│   │   │   ├── types.ts        # TypeScript interfaces
+│   │   │   ├── constants.ts    # Game constants
+│   │   │   └── data/           # JSON data (catastrophes, traits, bunker)
+│   │   └── utils/              # Utility functions (logger, delta, contentFilter)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── Dockerfile
 ├── frontend/              # Nuxt 3 application
 │   ├── components/        # Vue components
-│   ├── composables/       # Vue composables (useSocket)
-│   ├── pages/             # Nuxt pages
+│   ├── composables/       # Vue composables (useSocket, useAuth, useHotkeys, useToast)
+│   ├── pages/             # Nuxt pages (login, profile, game rooms)
 │   ├── stores/            # Pinia stores (game state)
+│   ├── services/          # API services
+│   ├── types/             # TypeScript type definitions
+│   ├── utils/             # Utility functions
+│   ├── plugins/           # Nuxt plugins
 │   ├── assets/css/        # Global styles
-│   ├── locales/           # i18n translations
+│   ├── i18n/locales/      # i18n translations
 │   ├── app.vue
 │   ├── nuxt.config.ts
 │   ├── tailwind.config.js
 │   ├── package.json
 │   └── Dockerfile
+├── database/              # Database migrations and initialization
+│   ├── migrations/        # SQL migration files
+│   └── init-db.sh         # Database initialization script
+├── casdoor/               # Casdoor SSO configuration
+│   └── conf/              # Casdoor app and service account configs
 ├── docker-compose.yml
+├── SETUP.md               # Detailed setup guide
 └── README.md
 ```
 
@@ -52,19 +66,24 @@ openbunker/
 ### Prerequisites
 
 - Node.js 18+
-- Docker & Docker Compose (optional)
+- Docker & Docker Compose
 
 ### Quick Start (Docker)
 
-```bash
-# Start both frontend and backend
-docker-compose up
+For detailed setup instructions, see [SETUP.md](SETUP.md).
 
-# Or in detached mode
+```bash
+# Copy environment file
+cp .env.dev .env
+
+# Start all services (frontend, backend, database, Casdoor)
 docker-compose up -d
 ```
 
-Frontend will be available at `http://localhost:3000`, backend at `http://localhost:3001`.
+Access:
+- **Frontend**: http://localhost:3000
+- **Backend**: http://localhost:3001
+- **Casdoor**: http://localhost:8000
 
 ### Development Mode (Individual Services)
 
@@ -97,6 +116,16 @@ npm run dev
 4. **Repeat**: Rounds continue, revealing new bunker rooms each round, until bunker capacity is reached.
 
 5. **Finale**: All remaining cards are revealed. Winners are the survivors who made it into the bunker.
+
+## Authentication
+
+The application uses **Casdoor** for Single Sign-On (SSO) authentication:
+
+- **OAuth 2.0 / OIDC** flow for secure authentication
+- **User profiles** with persistent identification across sessions
+- **Login/logout** functionality with session management
+- **Guest mode** support for quick game access
+- See [SETUP.md](SETUP.md) for Casdoor configuration details
 
 ## Key Features
 
@@ -150,9 +179,11 @@ npm run dev
 - **State Persistence**: LocalStorage saves player name and game state
 
 ### Security & Fairness
+- **Authentication**: Casdoor SSO with OAuth 2.0/OIDC
 - **Masked Game State**: Each player only sees their own hidden cards
 - **Host Validation**: Server-side verification of host actions
 - **Anti-Cheating**: All game logic runs server-side
+- **Data Persistence**: PostgreSQL database for user data and game history
 
 ## Socket Events
 
@@ -211,17 +242,41 @@ Each player has 6 hidden trait cards:
 
 ## Environment Variables
 
+### Application
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_ENV` | `development` | Environment mode |
+| `BACKEND_DOMAIN` | `http://localhost:3001` | Backend URL |
+| `FRONTEND_DOMAIN` | `http://localhost:3000` | Frontend URL |
+| `CASDOOR_DOMAIN` | `http://localhost:8000` | Casdoor SSO URL |
+
 ### Backend
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `3001` | Server port |
-| `FRONTEND_URL` | `http://localhost:3000` | CORS origin |
-| `NODE_ENV` | `production` | Environment mode |
+| `BACKEND_PORT` | `3001` | Server port |
+| `WS_PATH` | `/socket.io/` | WebSocket path |
 
-### Frontend
+### Casdoor Authentication
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WS_URL` | `http://localhost:3001` | WebSocket server URL |
+| `CASDOOR_URL` | `http://localhost:8000` | Casdoor instance URL |
+| `CASDOOR_ENDPOINT` | `http://casdoor:8000` | Casdoor endpoint (Docker) |
+| `CASDOOR_CLIENT_ID` | - | OAuth client ID |
+| `CASDOOR_CLIENT_SECRET` | - | OAuth client secret |
+| `CASDOOR_APP_NAME` | "Open Bunker" | Casdoor application name |
+| `CASDOOR_ORG_NAME` | "Open Bunker" | Casdoor organization name |
+| `CASDOOR_CERT` | - | Casdoor certificate for token verification |
+
+### Database
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql://postgres:postgres@postgres:5432/bunker` | PostgreSQL connection string |
+| `DATABASE_HOST` | `postgres` | Database host |
+| `DATABASE_PORT` | `5432` | Database port |
+| `DATABASE_NAME` | `bunker` | Database name |
+| `DATABASE_USER` | `postgres` | Database user |
+| `DATABASE_PASSWORD` | `postgres` | Database password |
+| `DATABASE_SSL` | `false` | Enable SSL for database |
 
 ## TODO
 
