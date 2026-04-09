@@ -30,11 +30,16 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files with ownership
 COPY --chown=nodejs:nodejs package*.json ./
 
-# Install only production dependencies
+# Install production dependencies
 RUN npm install --only=production && npm cache clean --force
 
 # Copy built application from builder stage with ownership
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
+# Copy Prisma files for migrations
+COPY --chown=nodejs:nodejs prisma ./prisma
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 USER nodejs
 
@@ -48,5 +53,5 @@ ENV BUNKER_CONFIG=/app/config.toml
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
-# Start the server
-CMD ["node", "dist/server.js"]
+# Run migrations and start the server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

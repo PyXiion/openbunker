@@ -97,7 +97,7 @@ export class SocketHandlers {
       let avatarUrl: string | undefined;
       try {
         const profile = await getProfile(authSocket.userId);
-        avatarUrl = profile?.avatar_url;
+        avatarUrl = profile?.avatarUrl ?? undefined;
       } catch (error) {
         console.error('Failed to fetch profile for avatar:', error);
       }
@@ -168,7 +168,7 @@ export class SocketHandlers {
       let avatarUrl: string | undefined;
       try {
         const profile = await getProfile(authSocket.userId);
-        avatarUrl = profile?.avatar_url;
+        avatarUrl = profile?.avatarUrl ?? undefined;
       } catch (error) {
         console.error('Failed to fetch profile for avatar:', error);
       }

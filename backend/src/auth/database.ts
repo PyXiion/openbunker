@@ -1,202 +1,205 @@
-import { Pool, PoolClient } from 'pg';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { logger } from '../utils/logger';
 import { getConfig } from '../config';
 
-let pool: Pool;
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const prisma = new PrismaClient({ adapter });
 
 export interface Profile {
   id: string;
   username: string;
-  email?: string;
-  avatar_url?: string;
-  is_guest: boolean;
-  created_at: Date;
-  updated_at: Date;
-  last_login?: Date;
+  email: string | null;
+  avatarUrl: string | null;
+  isGuest: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin: Date | null;
 }
 
 export interface UserStats {
-  profile_id: string;
-  games_played: number;
-  games_won: number;
-  total_playtime_minutes: number;
-  bunker_survival_rate: number;
-}
-
-export function initializeDatabase(): Pool {
-  if (!pool) {
-    const host = process.env.DATABASE_HOST || 'localhost';
-    const port = parseInt(process.env.DATABASE_PORT || '5432', 10);
-    const database = process.env.DATABASE_NAME || 'bunker';
-    const user = process.env.DATABASE_USER || 'postgres';
-    const password = process.env.DATABASE_PASSWORD || 'postgres';
-    const config = getConfig();
-
-    logger.info(`Initializing database connection: host=${host}, port=${port}, database=${database}, user=${user}`);
-    
-    pool = new Pool({
-      host,
-      port,
-      database,
-      user,
-      password,
-      max: parseInt(process.env.DATABASE_POOL_SIZE || '50', 10),
-      idleTimeoutMillis: config.database.idle_timeout_ms,
-      connectionTimeoutMillis: config.database.connection_timeout_ms,
-    });
-  }
-  return pool;
+  profileId: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  totalPlaytimeMinutes: number;
+  bunkerSurvivalRate: number;
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const db = initializeDatabase();
-  const result = await db.query(
-    'SELECT * FROM profiles WHERE id = $1',
-    [userId]
-  );
-  return result.rows[0] || null;
-}
-
-export async function createProfile(profile: Omit<Profile, 'created_at' | 'updated_at'>): Promise<Profile> {
-  const db = initializeDatabase();
-  const result = await db.query(
-    `INSERT INTO profiles (id, username, email, avatar_url, is_guest, last_login)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (id) DO UPDATE SET
-      username = EXCLUDED.username,
-      email = EXCLUDED.email,
-      avatar_url = EXCLUDED.avatar_url,
-      is_guest = EXCLUDED.is_guest,
-      last_login = EXCLUDED.last_login
-    RETURNING *`,
-    [profile.id, profile.username, profile.email, profile.avatar_url, profile.is_guest, profile.last_login]
-  );
-  return result.rows[0];
-}
-
-export async function updateProfile(userId: string, updates: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>): Promise<Profile | null> {
-  const db = initializeDatabase();
-  
-  // Whitelist of allowed column names to prevent SQL injection
-  const allowedColumns = ['username', 'email', 'avatar_url', 'is_guest', 'last_login'];
-  
-  const fields = [];
-  const values = [];
-  let paramIndex = 1;
-
-  for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined && allowedColumns.includes(key)) {
-      fields.push(`${key} = $${paramIndex}`);
-      values.push(value);
-      paramIndex++;
-    }
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+    });
+    return profile;
+  } catch (error) {
+    logger.error('Error fetching profile:', { error: error instanceof Error ? error.message : String(error) });
+    return null;
   }
+}
 
-  if (fields.length === 0) return null;
+export async function createProfile(profile: Omit<Profile, 'createdAt' | 'updatedAt'>): Promise<Profile> {
+  try {
+    const created = await prisma.profile.upsert({
+      where: { id: profile.id },
+      update: {
+        username: profile.username,
+        email: profile.email,
+        avatarUrl: profile.avatarUrl,
+        isGuest: profile.isGuest,
+        lastLogin: profile.lastLogin,
+      },
+      create: {
+        id: profile.id,
+        username: profile.username,
+        email: profile.email,
+        avatarUrl: profile.avatarUrl,
+        isGuest: profile.isGuest,
+        lastLogin: profile.lastLogin,
+      },
+    });
+    return created;
+  } catch (error) {
+    logger.error('Error creating profile:', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
+}
 
-  values.push(userId);
-  const result = await db.query(
-    `UPDATE profiles SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-    values
-  );
-  return result.rows[0] || null;
+export async function updateProfile(userId: string, updates: Partial<Omit<Profile, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Profile | null> {
+  try {
+    const updated = await prisma.profile.update({
+      where: { id: userId },
+      data: updates,
+    });
+    return updated;
+  } catch (error) {
+    logger.error('Error updating profile:', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
 }
 
 export async function getUserStats(userId: string): Promise<UserStats | null> {
-  const db = initializeDatabase();
-  const result = await db.query(
-    'SELECT * FROM user_stats WHERE profile_id = $1',
-    [userId]
-  );
-  return result.rows[0] || null;
+  try {
+    const stats = await prisma.userStats.findUnique({
+      where: { profileId: userId },
+    });
+    if (!stats) return null;
+    return {
+      ...stats,
+      bunkerSurvivalRate: Number(stats.bunkerSurvivalRate),
+    };
+  } catch (error) {
+    logger.error('Error fetching user stats:', { error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
 }
 
 export async function createOrUpdateUserStats(userId: string): Promise<UserStats> {
-  const db = initializeDatabase();
-  const result = await db.query(
-    'SELECT * FROM get_or_create_user_stats($1)',
-    [userId]
-  );
-  return result.rows[0];
+  try {
+    const stats = await prisma.userStats.upsert({
+      where: { profileId: userId },
+      update: {},
+      create: {
+        profileId: userId,
+      },
+    });
+    return {
+      ...stats,
+      bunkerSurvivalRate: Number(stats.bunkerSurvivalRate),
+    };
+  } catch (error) {
+    logger.error('Error creating/updating user stats:', { error: error instanceof Error ? error.message : String(error) });
+    throw error;
+  }
 }
 
 export async function recordGameHistory(gameData: {
-  room_id: string;
-  profile_id: string;
-  player_name: string;
-  game_status: string;
-  was_exiled: boolean;
+  roomId: string;
+  profileId: string;
+  playerName: string;
+  gameStatus: string;
+  wasExiled: boolean;
   survived: boolean;
-  final_round?: number;
-  players_count: number;
-  bunker_capacity: number;
-  catastrophe_id?: string;
-  duration_minutes?: number;
+  finalRound?: number;
+  playersCount: number;
+  bunkerCapacity: number;
+  catastropheId?: string;
+  durationMinutes?: number;
 }): Promise<void> {
-  const db = initializeDatabase();
-  
-  // Start transaction
-  const client = await db.connect();
   try {
-    await client.query('BEGIN');
-    
-    // Insert game history
-    const gameResult = await client.query(
-      `INSERT INTO game_history 
-       (room_id, profile_id, player_name, game_status, was_exiled, survived, final_round, players_count, bunker_capacity, catastrophe_id, duration_minutes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id`,
-      [
-        gameData.room_id,
-        gameData.profile_id,
-        gameData.player_name,
-        gameData.game_status,
-        gameData.was_exiled,
-        gameData.survived,
-        gameData.final_round,
-        gameData.players_count,
-        gameData.bunker_capacity,
-        gameData.catastrophe_id,
-        gameData.duration_minutes
-      ]
-    );
-    
-    const gameId = gameResult.rows[0].id;
-    
-    // Update user stats
-    await client.query(
-      `UPDATE user_stats 
-       SET games_played = games_played + 1,
-           games_won = games_won + $1,
-           total_playtime_minutes = total_playtime_minutes + $2,
-           bunker_survival_rate = ROUND(
-             (SELECT COUNT(*) FROM game_history WHERE profile_id = $3 AND survived = true) * 100.0 / 
-             NULLIF((SELECT COUNT(*) FROM game_history WHERE profile_id = $3), 0), 2
-           )
-       WHERE profile_id = $3`,
-      [gameData.survived ? 1 : 0, gameData.duration_minutes || 0, gameData.profile_id]
-    );
-    
-    await client.query('COMMIT');
+    await prisma.$transaction(async (tx) => {
+      // Insert game history
+      await tx.gameHistory.create({
+        data: {
+          roomId: gameData.roomId,
+          profileId: gameData.profileId,
+          playerName: gameData.playerName,
+          gameStatus: gameData.gameStatus,
+          wasExiled: gameData.wasExiled,
+          survived: gameData.survived,
+          finalRound: gameData.finalRound,
+          playersCount: gameData.playersCount,
+          bunkerCapacity: gameData.bunkerCapacity,
+          catastropheId: gameData.catastropheId,
+          durationMinutes: gameData.durationMinutes,
+        },
+      });
+
+      // Calculate new survival rate
+      const allGames = await tx.gameHistory.findMany({
+        where: { profileId: gameData.profileId },
+      });
+
+      const survivedGames = allGames.filter(g => g.survived).length;
+      const survivalRate = allGames.length > 0 
+        ? Number((survivedGames * 100.0 / allGames.length).toFixed(2))
+        : 0;
+
+      // Update user stats
+      await tx.userStats.upsert({
+        where: { profileId: gameData.profileId },
+        update: {
+          gamesPlayed: { increment: 1 },
+          gamesWon: gameData.survived ? { increment: 1 } : undefined,
+          totalPlaytimeMinutes: { increment: gameData.durationMinutes || 0 },
+          bunkerSurvivalRate: survivalRate,
+        },
+        create: {
+          profileId: gameData.profileId,
+          gamesPlayed: 1,
+          gamesWon: gameData.survived ? 1 : 0,
+          totalPlaytimeMinutes: gameData.durationMinutes || 0,
+          bunkerSurvivalRate: gameData.survived ? 100.00 : 0.00,
+        },
+      });
+    });
   } catch (error) {
-    await client.query('ROLLBACK');
+    logger.error('Error recording game history:', { error: error instanceof Error ? error.message : String(error) });
     throw error;
-  } finally {
-    client.release();
   }
 }
 
 export async function cleanupOldGuestProfiles(daysOld?: number): Promise<number> {
-  const config = getConfig();
-  const cleanupDays = daysOld ?? config.database.guest_profile_cleanup_days;
-  const db = initializeDatabase();
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - cleanupDays);
-  
-  const result = await db.query(
-    'DELETE FROM profiles WHERE is_guest = true AND last_login < $1',
-    [cutoffDate]
-  );
-  
-  return result.rowCount || 0;
+  try {
+    const config = getConfig();
+    const cleanupDays = daysOld ?? config.database.guest_profile_cleanup_days;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - cleanupDays);
+
+    const result = await prisma.profile.deleteMany({
+      where: {
+        isGuest: true,
+        lastLogin: {
+          lt: cutoffDate,
+        },
+      },
+    });
+
+    return result.count;
+  } catch (error) {
+    logger.error('Error cleaning up guest profiles:', { error: error instanceof Error ? error.message : String(error) });
+    return 0;
+  }
 }

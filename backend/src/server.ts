@@ -5,7 +5,6 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { SocketHandlers } from './socket/handlers';
 import { GameLogic } from './game/gameLogic';
-import { initializeDatabase } from './auth/database';
 import { authenticateSocketWithFallback } from './auth/middleware';
 import { logger } from './utils/logger';
 import { getConfig } from './config';
@@ -64,7 +63,7 @@ app.use((err: any, req: any, res: any, next: any) => {
 });
 
 // Initialize database
-initializeDatabase();
+import { prisma } from './auth/database';
 
 // Create singleton GameLogic instance
 const gameLogic = new GameLogic();
@@ -82,9 +81,7 @@ app.get('/health', async (req, res) => {
 
   // Check database connectivity
   try {
-    const { initializeDatabase } = await import('./auth/database');
-    const db = initializeDatabase();
-    await db.query('SELECT 1');
+    await prisma.$queryRaw`SELECT 1`;
     health.checks.database = 'ok';
   } catch (error) {
     health.checks.database = 'error';
@@ -125,7 +122,7 @@ const socketHandlers = new SocketHandlers(io, gameLogic);
 io.use(authenticateSocketWithFallback);
 
 io.on('connection', (socket) => {
-  logger.info(`User connected: ${(socket as any).userId} (${(socket as any).profile?.is_guest ? 'guest' : 'authenticated'})`);
+  logger.info(`User connected: ${(socket as any).userId} (${(socket as any).profile?.isGuest ? 'guest' : 'authenticated'})`);
   socketHandlers.handleConnection(socket);
 });
 

@@ -79,16 +79,16 @@ export async function authenticateSocket(socket: Socket, next: (err?: Error) => 
       profile = await createProfile({
         id: user.id,
         username: user.name || user.displayName || 'Unknown',
-        email: user.email,
-        avatar_url: user.avatar,
-        is_guest: false,
-        last_login: new Date(),
+        email: user.email ?? null,
+        avatarUrl: user.avatar ?? null,
+        isGuest: false,
+        lastLogin: new Date(),
       });
     } else {
       // Update last login
       profile = await updateProfile(user.id, {
-        last_login: new Date(),
-        avatar_url: user.avatar || profile.avatar_url,
+        lastLogin: new Date(),
+        avatarUrl: user.avatar || profile.avatarUrl,
       });
     }
 
@@ -119,14 +119,16 @@ export async function authenticateGuest(socket: Socket, next: (err?: Error) => v
       profile = await createProfile({
         id: guestInfo.userId,
         username: guestInfo.username,
-        is_guest: true,
-        last_login: new Date(),
+        email: null,
+        avatarUrl: null,
+        isGuest: true,
+        lastLogin: new Date(),
       });
     } else {
       // Update last login and ensure is_guest is set to true
       profile = await updateProfile(guestInfo.userId, {
-        last_login: new Date(),
-        is_guest: true,
+        lastLogin: new Date(),
+        isGuest: true,
       });
     }
 

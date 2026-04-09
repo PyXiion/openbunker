@@ -76,6 +76,16 @@ router.post('/guest', async (req, res) => {
     // Generate a guest user ID
     const guestUserId = `guest_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
     
+    // Persist guest profile to database immediately
+    const profile = await createProfile({
+      id: guestUserId,
+      username: username,
+      email: null,
+      avatarUrl: null,
+      isGuest: true,
+      lastLogin: new Date(),
+    });
+    
     res.json({
       userId: guestUserId,
       username,
@@ -111,15 +121,15 @@ router.get('/profile', async (req, res) => {
         id: user.id,
         username: user.name || user.displayName || 'Unknown',
         email: user.email,
-        avatar_url: user.avatar,
-        is_guest: false,
-        last_login: new Date(),
+        avatarUrl: user.avatar,
+        isGuest: false,
+        lastLogin: new Date(),
       });
     } else {
       // Update last login and verification status
       profile = await updateProfile(user.id, {
-        last_login: new Date(),
-        avatar_url: user.avatar || profile.avatar_url,
+        lastLogin: new Date(),
+        avatarUrl: user.avatar || profile.avatarUrl,
       });
     }
 
@@ -178,14 +188,14 @@ router.post('/callback', async (req, res) => {
         id: user.id,
         username: user.name || user.displayName || 'Unknown',
         email: user.email,
-        avatar_url: user.avatar,
-        is_guest: false,
-        last_login: new Date(),
+        avatarUrl: user.avatar,
+        isGuest: false,
+        lastLogin: new Date(),
       });
     } else {
       profile = await updateProfile(user.id, {
-        last_login: new Date(),
-        avatar_url: user.avatar || profile.avatar_url,
+        lastLogin: new Date(),
+        avatarUrl: user.avatar || profile.avatarUrl,
       });
     }
 
@@ -197,7 +207,7 @@ router.post('/callback', async (req, res) => {
       userId: user.id,
       username: profile.username,
       email: profile.email,
-      avatarUrl: profile.avatar_url,
+      avatarUrl: profile.avatarUrl,
       token: token,
     });
   } catch (error) {
@@ -226,9 +236,9 @@ router.post('/upgrade', async (req, res) => {
     
     // Update profile to mark as not a guest
     const profile = await updateProfile(shadowUserId, {
-      is_guest: false,
+      isGuest: false,
       email: realUser.email,
-      avatar_url: realUser.avatar,
+      avatarUrl: realUser.avatar,
     });
 
     res.json({
@@ -265,7 +275,18 @@ router.put('/username', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
     
-    // Update profile in database
+    // Update Casdoor first (IdP is source of truth)
+    try {
+      await casdoor.updateUser({
+        id: user.id,
+        name: username.trim(),
+      });
+    } catch (casdoorError) {
+      logger.error('Failed to update Casdoor username:', { error: casdoorError instanceof Error ? casdoorError.message : String(casdoorError) });
+      return res.status(500).json({ error: 'Failed to update username in Casdoor' });
+    }
+    
+    // Update local database after Casdoor succeeds
     const profile = await updateProfile(user.id, {
       username: username.trim(),
     });
@@ -280,6 +301,36 @@ router.put('/username', async (req, res) => {
   } catch (error) {
     console.error('Username update error:', error);
     res.status(500).json({ error: 'Failed to update username' });
+  }
+});
+
+// Casdoor webhook endpoint for bidirectional sync (Casdoor → DB)
+router.post('/casdoor/webhook', async (req, res) => {
+  try {
+    const { eventType, user } = req.body;
+    
+    if (!user || !user.id) {
+      return res.status(400).json({ error: 'Invalid webhook payload' });
+    }
+    
+    // Handle user update events
+    if (eventType === 'updateUser') {
+      const profile = await getProfile(user.id);
+      
+      if (profile) {
+        // Sync username, email, avatar from Casdoor
+        await updateProfile(user.id, {
+          username: user.name || profile.username,
+          email: user.email,
+          avatarUrl: user.avatar,
+        });
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Casdoor webhook error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to process webhook' });
   }
 });
 

@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  id         String    @id @map("id")
+  username   String    @unique @map("username") @db.VarChar(100)
+  email      String?   @map("email") @db.VarChar(255)
+  avatarUrl  String?   @map("avatar_url") @db.Text
+  isGuest    Boolean   @default(false) @map("is_guest")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLogin  DateTime? @map("last_login") @db.Timestamptz(6)
+
+  userStats  UserStats?
+  gameHistory GameHistory[]
+
+  @@index([username])
+  @@index([isGuest])
+  @@index([lastLogin])
+  @@map("profiles")
+}
+
+model UserStats {
+  profileId           String   @id @map("profile_id") @db.VarChar(255)
+  gamesPlayed         Int      @default(0) @map("games_played")
+  gamesWon            Int      @default(0) @map("games_won")
+  totalPlaytimeMinutes Int     @default(0) @map("total_playtime_minutes")
+  bunkerSurvivalRate  Decimal  @default(0.00) @map("bunker_survival_rate") @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("user_stats")
+}
+
+model GameHistory {
+  id              String    @id @default(uuid()) @map("id") @db.Uuid
+  roomId          String    @map("room_id") @db.VarChar(10)
+  profileId       String?   @map("profile_id") @db.VarChar(255)
+  playerName      String    @map("player_name") @db.VarChar(100)
+  gameStatus      String    @map("game_status") @db.VarChar(20)
+  wasExiled       Boolean   @default(false) @map("was_exiled")
+  survived        Boolean   @default(false)
+  finalRound      Int?      @map("final_round")
+  playersCount    Int       @map("players_count")
+  bunkerCapacity  Int       @map("bunker_capacity")
+  catastropheId   String?   @map("catastrophe_id") @db.VarChar(100)
+  playedAt        DateTime  @default(now()) @map("played_at") @db.Timestamptz(6)
+  durationMinutes Int?      @map("duration_minutes")
+
+  profile Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+
+  @@index([profileId])
+  @@index([playedAt])
+  @@index([roomId])
+  @@map("game_history")
+}
