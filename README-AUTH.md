@@ -123,6 +123,10 @@ See `.env.example` for required configuration:
 - `PUT /api/auth/username` - Update username (syncs with Casdoor first)
 - `POST /api/auth/casdoor/webhook` - Casdoor webhook for bidirectional sync
 
+### Game History & Statistics
+- `GET /api/auth/game-history?limit=20` - Get user's game history (authenticated only)
+- `GET /api/auth/stats` - Get user's aggregate statistics (authenticated only)
+
 ### Socket.io Events
 - All connections require authentication
 - Use `auth.token` or `auth.guest` in handshake
@@ -260,7 +264,8 @@ npx prisma migrate dev
 ## Future Enhancements
 
 1. **Social Providers**: Add more Casdoor providers
-2. **User Profiles**: Enhanced profile management
-3. **Game Statistics**: Detailed analytics dashboard
+2. **User Profiles**: Enhanced profile management with avatars
+3. **Game Statistics**: Detailed analytics dashboard with leaderboards
 4. **Moderation**: User reporting and moderation tools
 5. **Multi-tenant**: Support for multiple game instances
+6. **Achievements**: Unlockable achievements based on game statistics
