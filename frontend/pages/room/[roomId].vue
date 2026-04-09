@@ -35,7 +35,7 @@
       />
 
       <!-- Chat Box -->
-      <ChatBox 
+      <LazyChatBox 
         v-if="gameStore.room" 
         :room-id="gameStore.room.roomId" 
       />

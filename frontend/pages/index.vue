@@ -88,14 +88,14 @@
             <div class="tech-grid grid-cols-2 gap-4">
               <TechButton 
                 @click="createRoom" 
-                :disabled="!getPlayerName() || !!roomId"
+                :disabled="!!roomId"
                 :is-loading="isCreatingRoom"
               >
                 {{ $t('pages.index.createRoom') }}
               </TechButton>
               <TechButton 
                 @click="joinRoom" 
-                :disabled="!getPlayerName() || !roomId"
+                :disabled="!roomId"
                 :is-loading="isJoiningRoom"
               >
                 {{ $t('pages.index.joinRoom') }}
@@ -104,8 +104,9 @@
           </div>
 
           <!-- Error Display -->
-          <div v-if="gameStore.error" class="mt-4 p-3 border-2 border-accent bg-base">
+          <div v-if="gameStore.error" class="mt-4 p-3 border-2 border-accent bg-base flex justify-between items-center">
             <p class="text-accent font-bold uppercase text-sm">{{ $t('pages.index.error') }}: {{ $t(gameStore.error) }}</p>
+            <button @click="gameStore.setError(null)" class="text-accent hover:text-contrast ml-2 text-xl">×</button>
           </div>
 
           <!-- Kicked Alert -->

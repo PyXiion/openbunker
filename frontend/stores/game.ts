@@ -3,6 +3,24 @@ import { GAME_CONSTANTS } from '~/constants/game';
 import type { GameSettings } from '~/types/settings';
 import { applyDelta } from '~/utils/delta';
 
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
+// Debounced localStorage write with 1 second delay
+const debouncedSetItem = debounce((key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.error('Failed to write to localStorage:', error);
+  }
+}, 1000);
+
 export interface ChatMessage {
   id: string;
   playerId: string;
@@ -168,7 +186,7 @@ export const useGameStore = defineStore('game', {
     setRoom(room: GameRoom) {
       this.room = room;
       if (room) {
-        localStorage.setItem('gameRoom', JSON.stringify(room));
+        debouncedSetItem('gameRoom', JSON.stringify(room));
         // Sync chat history from room
         if (room.chatHistory) {
           this.chatHistory = room.chatHistory;
@@ -281,7 +299,7 @@ export const useGameStore = defineStore('game', {
       
       // Persist the updated room state
       if (this.room) {
-        localStorage.setItem('gameRoom', JSON.stringify(this.room));
+        debouncedSetItem('gameRoom', JSON.stringify(this.room));
         // Sync chat history from room
         if (this.room.chatHistory) {
           this.chatHistory = this.room.chatHistory;
