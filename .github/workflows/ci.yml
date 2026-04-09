@@ -32,6 +32,10 @@ jobs:
     - name: Type check
       working-directory: ./backend
       run: npx tsc --noEmit
+      
+    - name: Test
+      working-directory: ./backend
+      run: npm run test:run
 
   frontend:
     runs-on: ubuntu-latest
