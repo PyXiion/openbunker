@@ -1,5 +1,6 @@
 -- Create bunker database (separate from zitadel database)
-CREATE DATABASE IF NOT EXISTS bunker;
+-- This will be handled by the init script instead
+-- CREATE DATABASE bunker;
 
 -- Use bunker database
 \c bunker;
