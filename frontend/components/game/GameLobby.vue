@@ -76,7 +76,11 @@ useHotkeys([
   {
     key: 'Enter',
     handler: () => emit('start'),
-    condition: () => gameStore.canStartGame,
+    condition: () => {
+      const activeTag = document.activeElement?.tagName.toLowerCase();
+      const isInputFocused = activeTag === 'input' || activeTag === 'textarea';
+      return gameStore.canStartGame && !isInputFocused;
+    },
     preventDefault: true
   }
 ]);
