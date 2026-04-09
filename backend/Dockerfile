@@ -20,21 +20,19 @@ FROM node:18-alpine AS production
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install only production dependencies
-RUN npm install --only=production && npm cache clean --force
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
-
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Change ownership to nodejs user
-RUN chown -R nodejs:nodejs /app
+# Copy package files with ownership
+COPY --chown=nodejs:nodejs package*.json ./
+
+# Install only production dependencies
+RUN npm install --only=production && npm cache clean --force
+
+# Copy built application from builder stage with ownership
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
 USER nodejs
 
 # Expose port
