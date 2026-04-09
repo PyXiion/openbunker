@@ -18,6 +18,9 @@ build/
 .env.test.local
 .env.production.local
 
+# Configuration
+config.toml
+
 # IDE files
 .vscode/
 .idea/
