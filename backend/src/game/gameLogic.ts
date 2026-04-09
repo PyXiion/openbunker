@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GameRoom, Player, Trait, TraitType, GameStatus, BunkerStats, BunkerRoom, CatastropheCard, ChatMessage, ChatEventType } from './types';
 import { GameSettings } from '../types';
 import { GAME_CONSTANTS, BUNKER_RESOURCES } from './constants';
+import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -50,9 +51,25 @@ export class GameLogic {
   /**
    * Generates a random 6-character uppercase room ID.
    * Uses base36 encoding of a random number for readability.
+   * Checks for collisions with existing rooms.
    */
   generateRoomId(): string {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    let roomId: string;
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    do {
+      roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      attempts++;
+      
+      if (attempts >= maxAttempts) {
+        // Fallback to UUID if we can't find a unique ID
+        logger.warn('Could not generate unique 6-char room ID, falling back to UUID');
+        return uuidv4().substring(0, 8).toUpperCase();
+      }
+    } while (this.rooms.has(roomId));
+    
+    return roomId;
   }
 
   generatePersistentId(): string {
@@ -68,9 +85,10 @@ export class GameLogic {
    * @param hostPersistentId - Optional existing persistent ID for rejoining
    * @param language - Game language for card data
    * @param settings - Optional lobby settings (bunker capacity, etc.)
+   * @param avatarUrl - Optional avatar URL for the host
    * @returns The newly created GameRoom
    */
-  createRoom(hostSocketId: string, hostName: string, hostPersistentId?: string, language: string = 'en', settings?: GameSettings): GameRoom {
+  createRoom(hostSocketId: string, hostName: string, hostPersistentId?: string, language: string = 'en', settings?: GameSettings, avatarUrl?: string): GameRoom {
     const roomId = this.generateRoomId();
     console.log(`Creating room ${roomId} for host ${hostName} with language ${language}`);
     
@@ -90,7 +108,7 @@ export class GameLogic {
       chatHistory: []
     };
 
-    const host = this.createPlayer(hostSocketId, hostName, true, hostPersistentId);
+    const host = this.createPlayer(hostSocketId, hostName, true, hostPersistentId, avatarUrl);
     room.players[host.id] = host;
     room.turnOrder.push(host.id);
 
@@ -99,7 +117,7 @@ export class GameLogic {
     return room;
   }
 
-  createPlayer(socketId: string, playerName: string, isHost: boolean = false, persistentId?: string): Player {
+  createPlayer(socketId: string, playerName: string, isHost: boolean = false, persistentId?: string, avatarUrl?: string): Player {
     const id = persistentId || this.generatePersistentId();
     return {
       id,
@@ -107,6 +125,7 @@ export class GameLogic {
       name: playerName,
       isHost,
       isExiled: false,
+      avatarUrl,
       traits: {
         profession: { id: '', name: '', description: '', isRevealed: false },
         biology: { id: '', name: '', description: '', isRevealed: false },
@@ -129,9 +148,10 @@ export class GameLogic {
    * @param socketId - Current socket connection ID
    * @param playerName - Display name for the player
    * @param persistentId - Optional persistent ID for reconnection
+   * @param avatarUrl - Optional avatar URL for the player
    * @returns Updated GameRoom or null if join failed
    */
-  joinRoom(roomId: string, socketId: string, playerName: string, persistentId?: string): GameRoom | null {
+  joinRoom(roomId: string, socketId: string, playerName: string, persistentId?: string, avatarUrl?: string): GameRoom | null {
     const id = persistentId || this.generatePersistentId();
     console.log(`GameLogic.joinRoom called with roomId: ${roomId}, socketId: ${socketId}, playerName: ${playerName}, id: ${id}`);
     
@@ -169,7 +189,7 @@ export class GameLogic {
       return null;
     }
 
-    const player = this.createPlayer(socketId, playerName, false, id);
+    const player = this.createPlayer(socketId, playerName, false, id, avatarUrl);
     room.players[id] = player;
     room.turnOrder.push(id);
 
@@ -274,8 +294,8 @@ export class GameLogic {
     }
   }
 
-  private getFirstTraitToReveal(room: GameRoom): TraitType {
-    return room.settings?.firstTraitToReveal || 'profession';
+  private getFirstTraitToReveal(room: GameRoom): TraitType | null {
+    return room.settings?.firstTraitToReveal || null;
   }
 
   /**
@@ -346,23 +366,11 @@ export class GameLogic {
       return false; // Must reveal first trait before ending turn
     }
     
-    // Get all traits that can be revealed (all traits except the configured first one, if any)
-    const allTraitTypes: TraitType[] = ['profession', 'biology', 'hobby', 'phobia', 'baggage', 'fact'];
-    const otherTraits = firstTrait 
-      ? allTraitTypes.filter(t => t !== firstTrait) as TraitType[]
-      : allTraitTypes;
-    const unrevealedCards = otherTraits.filter(type => !player.traits[type].isRevealed).length;
-    
-    // Player must reveal N cards per turn total
-    // If a first trait is configured, it counts as the first one, so (N-1) more needed
-    // If no first trait is configured, any N cards can be revealed
-    const firstTraitRevealed = firstTrait ? 1 : 0;
-    const additionalRevealsRequired = Math.max(0, room.cardsToRevealPerTurn - firstTraitRevealed);
-    const additionalRevealsMade = room.cardsRevealedThisTurn - firstTraitRevealed;
-    const remainingCards = Math.min(additionalRevealsRequired, unrevealedCards);
-    
-    if (additionalRevealsMade < remainingCards) {
-      return false; // Not enough additional cards revealed
+    // Check if player revealed enough cards this turn
+    // The requirement is: reveal N cards per turn (cardsToRevealPerTurn)
+    // If a first trait is configured, it must be one of the N cards
+    if (room.cardsRevealedThisTurn < room.cardsToRevealPerTurn) {
+      return false; // Not enough cards revealed this turn
     }
 
     // Reset cards revealed counter for next turn
@@ -370,8 +378,16 @@ export class GameLogic {
 
     // Find next non-exiled player
     let nextIndex = room.currentTurnIndex;
+    let checkedCount = 0;
+    const maxChecks = room.turnOrder.length;
     do {
       nextIndex = (nextIndex + 1) % room.turnOrder.length;
+      checkedCount++;
+      // Safety: if we've checked all players and all are exiled, break
+      if (checkedCount >= maxChecks) {
+        nextIndex = 0;
+        break;
+      }
     } while (room.players[room.turnOrder[nextIndex]].isExiled && nextIndex !== room.currentTurnIndex);
 
     room.currentTurnIndex = nextIndex;
@@ -602,9 +618,17 @@ export class GameLogic {
         nextIndex = 0; // Wrap around if we were at the end
       }
       
-      // Find next non-exiled player
+      // Find next non-exiled player with safety check
+      let checkedCount = 0;
+      const maxChecks = room.turnOrder.length;
       do {
         nextIndex = (nextIndex + 1) % room.turnOrder.length;
+        checkedCount++;
+        // Safety: if we've checked all players and all are exiled, break
+        if (checkedCount >= maxChecks) {
+          nextIndex = 0;
+          break;
+        }
       } while (room.players[room.turnOrder[nextIndex]].isExiled && nextIndex !== room.currentTurnIndex);
       
       room.currentTurnIndex = nextIndex;

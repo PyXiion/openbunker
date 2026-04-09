@@ -2,14 +2,11 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { SocketHandlers } from './socket/handlers';
 import { GameLogic } from './game/gameLogic';
 import { initializeDatabase } from './auth/database';
 import { authenticateSocketWithFallback } from './auth/middleware';
-
-// Load environment variables
-dotenv.config();
+import { logger } from './utils/logger';
 
 const app = express();
 const server = createServer(app);
@@ -22,8 +19,23 @@ const io = new Server(server, {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  logger.log(`${req.method} ${req.path}`);
+  next();
+});
+
+// Error logging middleware
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
 
 // Initialize database
 initializeDatabase();
@@ -47,13 +59,13 @@ const socketHandlers = new SocketHandlers(io, gameLogic);
 io.use(authenticateSocketWithFallback);
 
 io.on('connection', (socket) => {
-  console.log(`User connected: ${(socket as any).userId} (${(socket as any).profile?.is_guest ? 'guest' : 'authenticated'})`);
+  logger.log(`User connected: ${(socket as any).userId} (${(socket as any).profile?.is_guest ? 'guest' : 'authenticated'})`);
   socketHandlers.handleConnection(socket);
 });
 
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`Bunker server running on port ${PORT}`);
-  console.log(`Zitadel URL: ${process.env.ZITADEL_URL}`);
+  logger.log(`Bunker server running on port ${PORT}`);
+  logger.log(`Casdoor URL: ${process.env.CASDOOR_URL}`);
 });

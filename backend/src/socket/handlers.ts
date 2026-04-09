@@ -4,7 +4,8 @@ import { TraitType, ChatMessage } from '../game/types';
 import { CreateRoomSettings, UpdateRoomSettings, SettingsValidator } from '../types';
 import { filterChatMessage } from '../utils/contentFilter';
 import { AuthenticatedSocket, requireAuthentication, requireRoomAccess, isGuest } from '../auth/middleware';
-import { recordGameHistory } from '../auth/database';
+import { recordGameHistory, getProfile } from '../auth/database';
+import { computeDelta, shouldSendFullState } from '../utils/delta';
 
 export class SocketHandlers {
   /**
@@ -12,6 +13,12 @@ export class SocketHandlers {
    * Key: persistentId, Value: timeout ID for delayed removal.
    */
   private pendingRemovals: Map<string, NodeJS.Timeout> = new Map();
+
+  /**
+   * Tracks the last sent room state for each player.
+   * Key: playerId (persistentId), Value: last sent room state
+   */
+  private lastSentState: Map<string, any> = new Map();
 
   constructor(private io: Server, private gameLogic: GameLogic) {
   }
@@ -78,11 +85,20 @@ export class SocketHandlers {
    * Supports reconnection: cancels pending removal if player reconnects within grace period.
    * Stores player data in socket.data for later reference.
    */
-  private handleJoinRoom(socket: Socket, roomId: string, playerName: string): void {
+  private async handleJoinRoom(socket: Socket, roomId: string, playerName: string): Promise<void> {
     try {
       const authSocket = requireRoomAccess(socket, roomId);
       
-      const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId);
+      // Fetch avatar URL from database
+      let avatarUrl: string | undefined;
+      try {
+        const profile = await getProfile(authSocket.userId);
+        avatarUrl = profile?.avatar_url;
+      } catch (error) {
+        console.error('Failed to fetch profile for avatar:', error);
+      }
+      
+      const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId, avatarUrl);
       
       if (!room) {
         socket.emit('JOIN_ERROR', { message: 'Failed to join room' });
@@ -98,6 +114,9 @@ export class SocketHandlers {
         socket.data.playerId = player.id; 
         socket.data.playerName = player.name;
         
+        // Clear last sent state to ensure player gets full state on join
+        this.lastSentState.delete(player.id);
+        
         // Cancel any pending removal timeout for this player
         const existingTimeout = this.pendingRemovals.get(player.id);
         if (existingTimeout) {
@@ -107,16 +126,7 @@ export class SocketHandlers {
         }
       }
 
-      // Log player join event
-      const eventMessage = this.gameLogic.addSystemEvent(
-        roomId,
-        'PLAYER_JOIN',
-        `${playerName} joined the room`,
-        { playerId: authSocket.userId, playerName }
-      );
-      this.broadcastChatMessage(roomId, eventMessage);
-
-      this.gameLogic.checkHostOwnershipTTL(roomId);    
+      this.gameLogic.checkHostOwnershipTTL(roomId);
       this.broadcastRoomState(roomId);
     } catch (error) {
       console.error('Join room error:', error);
@@ -124,14 +134,23 @@ export class SocketHandlers {
     }
   }
 
-  private handleCreateRoom(socket: Socket, playerName: string, language?: string, settings?: CreateRoomSettings): void {
+  private async handleCreateRoom(socket: Socket, playerName: string, language?: string, settings?: CreateRoomSettings): Promise<void> {
     try {
       const authSocket = requireAuthentication(socket);
       
       // Validate and convert settings using the validator
       const validatedSettings = settings ? SettingsValidator.validateSettings(settings) : undefined;
       
-      const room = this.gameLogic.createRoom(socket.id, playerName, authSocket.userId, language || 'en', validatedSettings);
+      // Fetch avatar URL from database
+      let avatarUrl: string | undefined;
+      try {
+        const profile = await getProfile(authSocket.userId);
+        avatarUrl = profile?.avatar_url;
+      } catch (error) {
+        console.error('Failed to fetch profile for avatar:', error);
+      }
+      
+      const room = this.gameLogic.createRoom(socket.id, playerName, authSocket.userId, language || 'en', validatedSettings, avatarUrl);
       
       socket.join(room.roomId);
       socket.data.roomId = room.roomId;
@@ -348,6 +367,9 @@ export class SocketHandlers {
     socket.data.roomId = null;
     socket.data.playerId = null;
     
+    // Clear last sent state for the leaving player
+    this.lastSentState.delete(player.id);
+    
     // Notify remaining players
     this.io.to(roomId).emit('PLAYER_LEFT', { playerId: player.id, playerName });
     this.broadcastRoomState(roomId);
@@ -398,6 +420,9 @@ export class SocketHandlers {
 
     // Notify the kicked player
     this.io.to(targetPlayer.socketId).emit('KICKED', { roomId, reason: 'Kicked by host' });
+
+    // Clear last sent state for the kicked player
+    this.lastSentState.delete(targetId);
 
     // Notify remaining players
     this.io.to(roomId).emit('PLAYER_KICKED', { playerId: targetId, playerName });
@@ -584,6 +609,10 @@ export class SocketHandlers {
         }
         
         console.log(`Player ${disconnectedSocketId} did not reconnect, removing from room ${roomId}`);
+        
+        // Clear last sent state for the disconnecting player
+        this.lastSentState.delete(playerId);
+        
         this.gameLogic.removePlayer(roomId, playerId);
         this.broadcastRoomState(roomId);
       }, 5000); // 5 second delay for reconnection
@@ -596,6 +625,7 @@ export class SocketHandlers {
   /**
    * Sends personalized masked room state to each connected player.
    * Each player receives a version where unrevealed cards are hidden.
+   * Uses differential updates to send only changed fields.
    * Called after any state-changing operation.
    */
   private broadcastRoomState(roomId: string): void {
@@ -605,7 +635,24 @@ export class SocketHandlers {
     // Send masked room state to each player (emit to their socketId)
     for (const player of Object.values(room.players)) {
       const maskedRoom = this.gameLogic.getMaskedRoom(roomId, player.id);
-      this.io.to(player.socketId).emit('ROOM_STATE_UPDATE', maskedRoom);
+      const lastState = this.lastSentState.get(player.id);
+
+      // Compute delta between last sent state and current state
+      const delta = computeDelta(lastState, maskedRoom);
+
+      // Determine whether to send full state or delta
+      const shouldSendFull = !lastState || shouldSendFullState(delta);
+
+      if (shouldSendFull) {
+        // Send full state for new connections or large changes
+        this.io.to(player.socketId).emit('ROOM_STATE_UPDATE', maskedRoom);
+        this.lastSentState.set(player.id, maskedRoom);
+      } else {
+        // Send differential update
+        this.io.to(player.socketId).emit('ROOM_STATE_DELTA', delta);
+        // Update last sent state by applying the delta
+        this.lastSentState.set(player.id, maskedRoom);
+      }
     }
   }
 
