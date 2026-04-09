@@ -4,11 +4,14 @@
  */
 
 import { LRUCache } from 'lru-cache';
+import { getConfig } from '../config';
+
+const config = getConfig();
 
 // LRU cache for filtered messages to reduce CPU overhead
 const filterCache = new LRUCache<string, string>({
-  max: 1000, // Cache up to 1000 unique messages
-  ttl: 1000 * 60 * 60, // 1 hour TTL
+  max: config.content_filter.cache_max,
+  ttl: config.content_filter.cache_ttl_ms,
 });
 
 // Comprehensive profanity filter - English

@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { logger } from '../utils/logger';
+import { getConfig } from '../config';
 
 let pool: Pool;
 
@@ -29,6 +30,7 @@ export function initializeDatabase(): Pool {
     const database = process.env.DATABASE_NAME || 'bunker';
     const user = process.env.DATABASE_USER || 'postgres';
     const password = process.env.DATABASE_PASSWORD || 'postgres';
+    const config = getConfig();
 
     logger.info(`Initializing database connection: host=${host}, port=${port}, database=${database}, user=${user}`);
     
@@ -39,8 +41,8 @@ export function initializeDatabase(): Pool {
       user,
       password,
       max: parseInt(process.env.DATABASE_POOL_SIZE || '50', 10),
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      idleTimeoutMillis: config.database.idle_timeout_ms,
+      connectionTimeoutMillis: config.database.connection_timeout_ms,
     });
   }
   return pool;
@@ -184,10 +186,12 @@ export async function recordGameHistory(gameData: {
   }
 }
 
-export async function cleanupOldGuestProfiles(daysOld: number = 30): Promise<number> {
+export async function cleanupOldGuestProfiles(daysOld?: number): Promise<number> {
+  const config = getConfig();
+  const cleanupDays = daysOld ?? config.database.guest_profile_cleanup_days;
   const db = initializeDatabase();
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+  cutoffDate.setDate(cutoffDate.getDate() - cleanupDays);
   
   const result = await db.query(
     'DELETE FROM profiles WHERE is_guest = true AND last_login < $1',

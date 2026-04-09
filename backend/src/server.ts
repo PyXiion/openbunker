@@ -8,10 +8,12 @@ import { GameLogic } from './game/gameLogic';
 import { initializeDatabase } from './auth/database';
 import { authenticateSocketWithFallback } from './auth/middleware';
 import { logger } from './utils/logger';
+import { getConfig } from './config';
 
 const app = express();
 app.set('trust proxy', true);
 const server = createServer(app);
+const config = getConfig();
 const io = new Server(server, {
   path: process.env.WS_PATH,
   cors: {
@@ -19,14 +21,14 @@ const io = new Server(server, {
     methods: ["GET", "POST"]
   },
   perMessageDeflate: {
-    threshold: 1024, // Compress messages >1KB
+    threshold: config.server.compression_threshold,
     zlibDeflateOptions: {
-      level: 3,
-      memLevel: 7
+      level: config.server.compression_level,
+      memLevel: config.server.compression_mem_level
     },
     zlibInflateOptions: {
-      level: 3,
-      memLevel: 7
+      level: config.server.compression_level,
+      memLevel: config.server.compression_mem_level
     }
   }
 });
@@ -40,8 +42,8 @@ app.use(express.json());
 
 // Rate limiting middleware
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: config.server.rate_limit_window_ms,
+  max: config.server.rate_limit_max,
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -95,7 +97,7 @@ app.get('/health', async (req, res) => {
     if (casdoorUrl) {
       const response = await fetch(`${casdoorUrl}/api/health`, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(config.server.health_check_timeout_ms)
       }).catch(() => null);
       health.checks.casdoor = response && response.ok ? 'ok' : 'error';
       // Casdoor failure doesn't degrade overall health status
@@ -130,9 +132,9 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3001;
 
 // Configure server timeouts to prevent hung connections
-server.setTimeout(30000); // 30 second timeout for requests
-server.keepAliveTimeout = 65000; // 65 seconds for keep-alive
-server.headersTimeout = 66000; // Slightly longer than keepAliveTimeout
+server.setTimeout(config.server.server_timeout_ms);
+server.keepAliveTimeout = config.server.keep_alive_timeout_ms;
+server.headersTimeout = config.server.headers_timeout_ms;
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal: string) {
@@ -148,11 +150,11 @@ async function gracefulShutdown(signal: string) {
     logger.info('Socket.IO server closed');
   });
   
-  // Force close after 10 seconds
+  // Force close after timeout
   setTimeout(() => {
     logger.error('Forced shutdown after timeout');
     process.exit(1);
-  }, 10000);
+  }, config.server.graceful_shutdown_timeout_ms);
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

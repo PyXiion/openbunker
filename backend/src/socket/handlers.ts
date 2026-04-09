@@ -75,6 +75,10 @@ export class SocketHandlers {
       this.handleSendChatMessage(socket, data.roomId, data.message);
     });
 
+    socket.on('TOGGLE_READY', (data: { roomId: string }) => {
+      this.handleToggleReady(socket, data.roomId);
+    });
+
     socket.on('disconnect', () => {
       this.handleDisconnect(socket);
     });
@@ -117,7 +121,7 @@ export class SocketHandlers {
         return;
       }
       
-      const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId, avatarUrl);
+      const room = this.gameLogic.joinRoom(roomId, socket.id, playerName, authSocket.userId, avatarUrl, isGuest(socket));
       
       if (!room) {
         socket.emit('JOIN_ERROR', { message: 'errors.generic' });
@@ -169,7 +173,7 @@ export class SocketHandlers {
         console.error('Failed to fetch profile for avatar:', error);
       }
       
-      const room = this.gameLogic.createRoom(socket.id, playerName, authSocket.userId, language || 'en', validatedSettings, avatarUrl);
+      const room = this.gameLogic.createRoom(socket.id, playerName, authSocket.userId, language || 'en', validatedSettings, avatarUrl, isGuest(socket));
       
       socket.join(room.roomId);
       socket.data.roomId = room.roomId;
@@ -513,8 +517,9 @@ export class SocketHandlers {
       return;
     }
 
-    // Validate and update settings
-    const validatedSettings = SettingsValidator.validateSettings(settings);
+    // Validate and update settings with player count
+    const playerCount = Object.keys(room.players).length;
+    const validatedSettings = SettingsValidator.validateSettings(settings, playerCount);
     room.settings = { ...room.settings, ...validatedSettings };
     console.log(`Settings updated for room ${roomId}:`, settings);
 
@@ -522,7 +527,7 @@ export class SocketHandlers {
   }
 
   private handleSendChatMessage(socket: Socket, roomId: string, message: string): void {
-    console.log(`[CHAT] Received message from ${socket.id} in room ${roomId}: "${message.substring(0, 50)}..."`);
+    console.log(`[CHAT] Received message from ${socket.id} in room ${roomId}: "${message.substring(0, 50)}..."}`);
     
     const room = this.gameLogic.getRoom(roomId);
     const player = Object.values(room?.players || {}).find(p => p.socketId === socket.id);
@@ -574,6 +579,27 @@ export class SocketHandlers {
       this.io.to(roomId).emit('CHAT_MESSAGE', chatMessage);
       console.log(`[CHAT] Message broadcast complete: ${chatMessage.id}`);
     }
+  }
+
+  private handleToggleReady(socket: Socket, roomId: string): void {
+    const room = this.gameLogic.getRoom(roomId);
+    const player = Object.values(room?.players || {}).find(p => p.socketId === socket.id);
+
+    if (!room) {
+      socket.emit('ERROR', { message: 'Room not found' });
+      return;
+    }
+
+    if (!player) {
+      socket.emit('ERROR', { message: 'Player not found' });
+      return;
+    }
+
+    // Toggle ready status
+    player.isReady = !player.isReady;
+    console.log(`Player ${player.name} toggled ready status to ${player.isReady}`);
+
+    this.broadcastRoomState(roomId);
   }
 
   /**

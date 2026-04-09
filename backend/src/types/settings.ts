@@ -46,14 +46,20 @@ export const DEFAULT_SETTINGS: Required<Omit<GameSettings, 'bunkerCapacity'>> = 
 export class SettingsValidator {
   /**
    * Validates bunker capacity setting
+   * @param value - The capacity value to validate (null = auto)
+   * @param playerCount - Current number of players in the room
+   * @returns Validated capacity (null for auto, or clamped value)
    */
-  static validateBunkerCapacity(value?: number | null): number | null {
+  static validateBunkerCapacity(value?: number | null, playerCount: number = 1): number | null {
     if (value === undefined || value === null) {
       return null; // auto capacity
     }
     
-    // Ensure it's within valid range (1-10)
-    const capacity = Math.max(1, Math.min(10, Math.floor(value)));
+    // Minimum: 2, Maximum: playerCount - 1 (at least 2)
+    const minCapacity = 2;
+    const maxCapacity = Math.max(2, playerCount - 1);
+    
+    const capacity = Math.max(minCapacity, Math.min(maxCapacity, Math.floor(value)));
     return capacity;
   }
 
@@ -78,10 +84,13 @@ export class SettingsValidator {
 
   /**
    * Validates complete settings object
+   * @param settings - Settings to validate
+   * @param playerCount - Current number of players in the room
+   * @returns Validated settings object
    */
-  static validateSettings(settings?: Partial<GameSettings>): GameSettings {
+  static validateSettings(settings?: Partial<GameSettings>, playerCount: number = 1): GameSettings {
     return {
-      bunkerCapacity: this.validateBunkerCapacity(settings?.bunkerCapacity),
+      bunkerCapacity: this.validateBunkerCapacity(settings?.bunkerCapacity, playerCount),
       firstTraitToReveal: this.validateFirstTraitToReveal(settings?.firstTraitToReveal),
       enableContentFilter: this.validateContentFilter(settings?.enableContentFilter),
     };

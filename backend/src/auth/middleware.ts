@@ -123,9 +123,10 @@ export async function authenticateGuest(socket: Socket, next: (err?: Error) => v
         last_login: new Date(),
       });
     } else {
-      // Update last login
+      // Update last login and ensure is_guest is set to true
       profile = await updateProfile(guestInfo.userId, {
         last_login: new Date(),
+        is_guest: true,
       });
     }
 
@@ -171,7 +172,10 @@ export function requireAuthentication(socket: Socket): AuthenticatedSocket {
 
 export function isGuest(socket: Socket): boolean {
   const authSocket = socket as AuthenticatedSocket;
-  return authSocket.profile?.is_guest || false;
+  // Check if socket authenticated via guest flow (no token, but guest info present)
+  const hasGuestAuth = socket.handshake.auth.guest;
+  const hasToken = socket.handshake.auth.token;
+  return !!hasGuestAuth && !hasToken;
 }
 
 

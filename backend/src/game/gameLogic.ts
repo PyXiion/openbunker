@@ -106,16 +106,17 @@ export class GameLogic {
    * @param language - Game language for card data
    * @param settings - Optional lobby settings (bunker capacity, etc.)
    * @param avatarUrl - Optional avatar URL for the host
+   * @param isGuest - Optional guest status for the host
    * @returns The newly created GameRoom
    */
-  createRoom(hostSocketId: string, hostName: string, hostPersistentId?: string, language: string = 'en', settings?: GameSettings, avatarUrl?: string): GameRoom {
+  createRoom(hostSocketId: string, hostName: string, hostPersistentId?: string, language: string = 'en', settings?: GameSettings, avatarUrl?: string, isGuest: boolean = false): GameRoom {
     const roomId = this.generateRoomId();
     console.log(`Creating room ${roomId} for host ${hostName} with language ${language}`);
     
     const room: GameRoom = {
       roomId,
       status: 'LOBBY',
-      round: 1,
+      round: 0,
       catastrophe: null,
       bunker: null,
       players: {},
@@ -124,11 +125,11 @@ export class GameLogic {
       cardsToRevealPerTurn: 1,
       cardsRevealedThisTurn: 0,
       language,
-      settings: settings || { bunkerCapacity: null },
+      settings,
       chatHistory: []
     };
 
-    const host = this.createPlayer(hostSocketId, hostName, true, hostPersistentId, avatarUrl);
+    const host = this.createPlayer(hostSocketId, hostName, true, hostPersistentId, avatarUrl, isGuest);
     room.players[host.id] = host;
     room.turnOrder.push(host.id);
 
@@ -137,7 +138,7 @@ export class GameLogic {
     return room;
   }
 
-  createPlayer(socketId: string, playerName: string, isHost: boolean = false, persistentId?: string, avatarUrl?: string): Player {
+  createPlayer(socketId: string, playerName: string, isHost: boolean = false, persistentId?: string, avatarUrl?: string, isGuest: boolean = false): Player {
     const id = persistentId || this.generatePersistentId();
     return {
       id,
@@ -145,6 +146,8 @@ export class GameLogic {
       name: playerName,
       isHost,
       isExiled: false,
+      isReady: false,
+      isGuest,
       avatarUrl,
       traits: {
         profession: { id: '', name: '', description: '', isRevealed: false },
@@ -169,9 +172,10 @@ export class GameLogic {
    * @param playerName - Display name for the player
    * @param persistentId - Optional persistent ID for reconnection
    * @param avatarUrl - Optional avatar URL for the player
+   * @param isGuest - Optional guest status for the player
    * @returns Updated GameRoom or null if join failed
    */
-  joinRoom(roomId: string, socketId: string, playerName: string, persistentId?: string, avatarUrl?: string): GameRoom | null {
+  joinRoom(roomId: string, socketId: string, playerName: string, persistentId?: string, avatarUrl?: string, isGuest: boolean = false): GameRoom | null {
     const id = persistentId || this.generatePersistentId();
     console.log(`GameLogic.joinRoom called with roomId: ${roomId}, socketId: ${socketId}, playerName: ${playerName}, id: ${id}`);
     
@@ -179,24 +183,21 @@ export class GameLogic {
     console.log(`Room found: ${!!room}, status: ${room?.status}`);
     
     if (!room) {
+      console.log(`Room ${roomId} not found`);
       return null;
     }
 
-    // Check if player is already in the room with same ID (duplicate request)
-    if (room.players[id]) {
-      console.log(`Player ${id} already in room ${roomId}, updating socket ID`);
-      room.players[id].socketId = socketId;
-      return room;
+    if (room.status !== 'LOBBY') {
+      console.log(`Room ${roomId} is not in LOBBY state`);
+      return null;
     }
 
-    // Check if player is reconnecting (already exists in room with same name/persistentId logic)
-    // For now, treat as new player if ID doesn't match
-    const existingPlayer = Object.values(room.players).find(p => p.socketId === socketId);
-    
+    // Check if player with this persistentId already exists (reconnection)
+    const existingPlayer = Object.values(room.players).find(p => p.id === id);
     if (existingPlayer) {
-      // Player is reconnecting with same socket, just update
-      console.log(`Player ${playerName} is reconnecting with socket ${socketId}`);
+      console.log(`Player ${id} already in room ${roomId}, updating socket ID and guest status`);
       existingPlayer.socketId = socketId;
+      existingPlayer.isGuest = isGuest;
       return room;
     }
 
@@ -209,7 +210,7 @@ export class GameLogic {
       return null;
     }
 
-    const player = this.createPlayer(socketId, playerName, false, id, avatarUrl);
+    const player = this.createPlayer(socketId, playerName, false, id, avatarUrl, isGuest);
     room.players[id] = player;
     room.turnOrder.push(id);
 

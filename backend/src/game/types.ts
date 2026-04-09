@@ -48,6 +48,8 @@ export interface Player {
   name: string;
   isHost: boolean;
   isExiled: boolean;
+  isReady: boolean;
+  isGuest: boolean;
   avatarUrl?: string;
   traits: {
     profession: Trait;
@@ -125,6 +127,8 @@ export interface ClientPlayer {
   name: string;
   isHost: boolean;
   isExiled: boolean;
+  isReady: boolean;
+  isGuest: boolean;
   avatarUrl?: string;
   traits: {
     profession: Trait;
