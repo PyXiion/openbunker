@@ -1,23 +1,24 @@
 # Authentication System Implementation
 
-This document describes the new authentication system implemented using Zitadel OIDC.
+This document describes the authentication system implemented using Casdoor SSO/OIDC with Prisma ORM.
 
 ## Overview
 
-The Bunker game now supports enterprise-grade authentication with:
-- **Guest users**: Play without registration
-- **Authenticated users**: Login with email/password or social providers
+The Bunker game supports authentication with:
+- **Guest users**: Play without registration (persistent profiles in database)
+- **Authenticated users**: Login with Casdoor SSO
 - **Account upgrade**: Guests can convert to full accounts
 - **Secure sockets**: JWT-based authentication prevents ID spoofing
+- **Bidirectional sync**: User data synced between database and Casdoor
 
 ## Architecture
 
 ### Backend Changes
 
-1. **Zitadel Integration** (`/backend/src/auth/`)
-   - `zitadel.ts`: Zitadel client with JWKS caching
+1. **Casdoor Integration** (`/backend/src/auth/`)
+   - `routes.ts`: Casdoor OAuth endpoints and webhook for bidirectional sync
    - `middleware.ts`: Socket.io authentication middleware
-   - `database.ts`: PostgreSQL user management
+   - `database.ts`: Prisma ORM for user management
    - `routes.ts`: Auth API endpoints
 
 2. **Security Improvements**
@@ -25,15 +26,15 @@ The Bunker game now supports enterprise-grade authentication with:
    - Room-level authorization
    - No more persistent ID broadcasting
 
-3. **Database Schema**
-   - `profiles`: User profiles with guest/verified status
-   - `user_stats`: Game statistics
-   - `game_history`: Historical game records
+3. **Database Schema (Prisma)**
+   - `Profile`: User profiles with guest/verified status
+   - `UserStats`: Game statistics
+   - `GameHistory`: Historical game records
 
 ### Frontend Changes
 
 1. **Auth Composable** (`/frontend/composables/useAuth.ts`)
-   - OIDC client integration
+   - Casdoor client integration
    - Guest user management
    - Account upgrade flow
 
@@ -49,33 +50,24 @@ The Bunker game now supports enterprise-grade authentication with:
 
 ### Docker Services
 
-1. **Zitadel**: OIDC provider with HTTP/2 support (port 8080)
+1. **Casdoor**: SSO/OIDC provider (port 8000)
 2. **PostgreSQL**: User data and game history
-3. **Backend**: Updated with auth middleware (port 3001)
-4. **Frontend**: OIDC client integration (port 3000)
-5. **External Reverse Proxy**: Traefik or similar for HTTP/2 and gRPC support
+3. **Backend**: Updated with auth middleware and Prisma (port 3001)
+4. **Frontend**: Casdoor client integration (port 3000)
 
 ### Environment Variables
 
 See `.env.example` for required configuration:
-- Zitadel URL and client credentials
-- Service account for shadow user creation
-- Database connection
+- Casdoor URL and client credentials
+- Casdoor certificate for token verification
+- Database connection (DATABASE_URL)
 
 ### Port Bindings
 
-- **Zitadel**: `8080:8080` (HTTP/2 with h2c)
+- **Casdoor**: `8000:8000` (SSO/OIDC)
 - **Backend**: `3001:3001` (API and Socket.io)
-- **Frontend**: `3000:80` (Web UI)
+- **Frontend**: `3000:3000` (Web UI)
 - **PostgreSQL**: `5432:5432` (Database)
-
-### External Reverse Proxy Notes
-
-When using Traefik or similar:
-- Configure HTTP/2 support for Zitadel gRPC endpoints
-- Use h2c for development, https for production
-- Ensure proper CORS configuration
-- Handle WebSocket upgrade for Socket.io
 
 ## Security Features
 
@@ -85,85 +77,143 @@ When using Traefik or similar:
 - No authentication required
 
 ### After (Secure)
-- JWT-based authentication
+- JWT-based authentication with Casdoor
 - Secure Socket.io handshake
 - Room-level authorization
 - Guest user isolation
+- Bidirectional Casdoor sync (IdP as source of truth)
 
 ## User Flows
 
 ### Guest User Flow
 1. Click "Play as Guest"
 2. Enter username
-3. Get temporary guest account
-4. Play games with limited features
+3. Profile created in database immediately (isGuest=true)
+4. Play games with persistent profile
 5. Option to upgrade later
 
 ### Authenticated User Flow
 1. Click "Login"
-2. Redirect to Zitadel
-3. Login with email/password or social
+2. Redirect to Casdoor
+3. Login with email/password or social providers
 4. Return with JWT token
-5. Full access to all features
+5. Profile created/synced in database
+6. Full access to all features
 
 ### Account Upgrade Flow
 1. Guest user clicks "Save Account"
-2. Redirect to Zitadel
+2. Redirect to Casdoor
 3. Login or register
-4. Shadow user linked to real account
+4. Guest profile linked to real account (isGuest=false)
 5. Preserve game history and stats
+
+### Username Update Flow
+1. Authenticated user updates username via API
+2. Casdoor API called first (IdP as source of truth)
+3. Local database updated after Casdoor succeeds
+4. Webhook ensures eventual consistency if DB update fails
 
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/guest` - Create guest user
-- `POST /api/auth/shadow-user` - Create shadow user with token
+- `POST /api/auth/guest` - Create guest user (persistent profile)
 - `GET /api/auth/profile` - Get user profile
-- `POST /api/auth/upgrade` - Upgrade guest to real account
 - `POST /api/auth/callback` - OAuth callback endpoint
-- `PUT /api/auth/username` - Update username
+- `POST /api/auth/upgrade` - Upgrade guest to real account
+- `PUT /api/auth/username` - Update username (syncs with Casdoor first)
+- `POST /api/auth/casdoor/webhook` - Casdoor webhook for bidirectional sync
 
 ### Socket.io Events
-- All connections now require authentication
+- All connections require authentication
 - Use `auth.token` or `auth.guest` in handshake
 - Room-level authorization enforced
+
+## Database Schema (Prisma)
+
+### Models
+
+**Profile**
+- `id`: User ID (primary key)
+- `username`: Display name (unique)
+- `email`: Email address (nullable)
+- `avatarUrl`: Profile picture (nullable)
+- `isGuest`: Guest status flag
+- `createdAt`: Profile creation timestamp
+- `updatedAt`: Last update timestamp (auto-updated)
+- `lastLogin`: Last login timestamp (nullable)
+
+**UserStats**
+- `profileId`: Reference to Profile (primary key)
+- `gamesPlayed`: Total games played
+- `gamesWon`: Total games won
+- `totalPlaytimeMinutes`: Total playtime in minutes
+- `bunkerSurvivalRate`: Survival rate percentage
+- `createdAt`: Stats creation timestamp
+- `updatedAt`: Last update timestamp (auto-updated)
+
+**GameHistory**
+- `id`: Game record ID (UUID)
+- `roomId`: Room identifier
+- `profileId`: Reference to Profile (nullable, SET NULL on delete)
+- `playerName`: Player name at time of game
+- `gameStatus`: Game outcome
+- `wasExiled`: Whether player was exiled
+- `survived`: Whether player survived
+- `finalRound`: Final round reached (nullable)
+- `playersCount`: Total players in game
+- `bunkerCapacity`: Bunker capacity
+- `catastropheId`: Catastrophe identifier (nullable)
+- `playedAt`: Game timestamp
+- `durationMinutes`: Game duration (nullable)
+
+### Migrations
+
+Database migrations are managed by Prisma:
+- Schema defined in `backend/prisma/schema.prisma`
+- Migrations in `backend/prisma/migrations/`
+- Automatic migration on Docker container startup
+- Use `npx prisma migrate dev` for development
+- Use `npx prisma migrate deploy` for production
 
 ## Migration Notes
 
 ### Database Migration
-- Automatic schema creation via Docker init scripts
-- Existing game data preserved
-- New user management tables added
+- Prisma migrations handle schema changes
+- Existing game data preserved during migration
+- New user management tables added via Prisma
 
 ### Breaking Changes
 - Socket.io connections now require authentication
 - Persistent ID system removed
 - Frontend must use new auth flow
+- Database now uses Prisma ORM instead of raw SQL
 
 ## Development Setup
 
 1. Copy `.env.example` to `.env` and configure
 2. Run `docker-compose up` to start all services
-3. Access Zitadel console at `http://localhost:8080`
-4. Configure OIDC client and service account
+3. Access Casdoor console at `http://localhost:8000`
+4. Configure Casdoor application and organization
 5. Update environment variables with actual values
 
 ## Production Considerations
 
 1. **Security**
-   - Change default masterkey in Zitadel
    - Use HTTPS in production
    - Configure proper CORS origins
+   - Verify webhook signatures for Casdoor sync
+   - Use strong Casdoor client secrets
 
 2. **Performance**
-   - JWKS caching reduces token verification overhead
+   - Prisma connection pooling configured
    - Database indexes for user queries
-   - Connection pooling for PostgreSQL
+   - Connection limit configured for horizontal scaling
 
 3. **Monitoring**
    - Log authentication events
    - Monitor failed login attempts
    - Track guest account usage
+   - Monitor Casdoor webhook delivery
 
 ## Troubleshooting
 
@@ -171,7 +221,7 @@ When using Traefik or similar:
 
 1. **Socket connection failed**
    - Check authentication token validity
-   - Verify Zitadel is accessible
+   - Verify Casdoor is accessible
    - Check CORS configuration
 
 2. **Guest user creation failed**
@@ -179,10 +229,15 @@ When using Traefik or similar:
    - Check database connection
    - Review error logs
 
-3. **OIDC callback errors**
+3. **Casdoor callback errors**
    - Verify redirect URI configuration
    - Check client ID and secret
-   - Review Zitadel logs
+   - Review Casdoor logs
+
+4. **Prisma migration errors**
+   - Verify DATABASE_URL is correct
+   - Check PostgreSQL is accessible
+   - Run `npx prisma migrate reset` if needed
 
 ### Debug Commands
 
@@ -192,15 +247,19 @@ docker-compose ps
 
 # View logs
 docker-compose logs -f backend
-docker-compose logs -f zitadel
+docker-compose logs -f casdoor
 
 # Access database
 docker-compose exec postgres psql -U postgres -d bunker
+
+# Run Prisma migrations
+cd backend
+npx prisma migrate dev
 ```
 
 ## Future Enhancements
 
-1. **Social Providers**: Add Google, GitHub, etc.
+1. **Social Providers**: Add more Casdoor providers
 2. **User Profiles**: Enhanced profile management
 3. **Game Statistics**: Detailed analytics dashboard
 4. **Moderation**: User reporting and moderation tools

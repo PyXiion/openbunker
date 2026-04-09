@@ -10,7 +10,7 @@ A multiplayer social deduction game where players debate their usefulness to sur
 |-----------|------------|
 | **Frontend** | Nuxt 3 + Vue 3 + TailwindCSS + Pinia |
 | **Backend** | Node.js + Express + Socket.io + TypeScript |
-| **Database** | PostgreSQL |
+| **Database** | PostgreSQL + Prisma ORM |
 | **Authentication** | Casdoor (SSO/OIDC) |
 | **Deployment** | Docker + Docker Compose |
 | **State Management** | Pinia (Frontend) + PostgreSQL (Backend) |
@@ -32,6 +32,10 @@ openbunker/
 │   │   │   ├── constants.ts    # Game constants
 │   │   │   └── data/           # JSON data (catastrophes, traits, bunker)
 │   │   └── utils/              # Utility functions (logger, delta, contentFilter)
+│   ├── prisma/                 # Prisma ORM configuration and migrations
+│   │   ├── schema.prisma       # Database schema definition
+│   │   ├── prisma.config.ts    # Prisma configuration
+│   │   └── migrations/         # Database migration files
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── Dockerfile
@@ -51,9 +55,6 @@ openbunker/
 │   ├── tailwind.config.js
 │   ├── package.json
 │   └── Dockerfile
-├── database/              # Database migrations and initialization
-│   ├── migrations/        # SQL migration files
-│   └── init-db.sh         # Database initialization script
 ├── casdoor/               # Casdoor SSO configuration
 │   └── conf/              # Casdoor app and service account configs
 ├── docker-compose.yml
@@ -124,7 +125,8 @@ The application uses **Casdoor** for Single Sign-On (SSO) authentication:
 - **OAuth 2.0 / OIDC** flow for secure authentication
 - **User profiles** with persistent identification across sessions
 - **Login/logout** functionality with session management
-- **Guest mode** support for quick game access
+- **Guest mode** support for quick game access with database persistence
+- **Bidirectional sync** with Casdoor (DB → Casdoor, Casdoor → DB via webhook)
 - See [SETUP.md](SETUP.md) for Casdoor configuration details
 
 ## Key Features
@@ -183,7 +185,7 @@ The application uses **Casdoor** for Single Sign-On (SSO) authentication:
 - **Masked Game State**: Each player only sees their own hidden cards
 - **Host Validation**: Server-side verification of host actions
 - **Anti-Cheating**: All game logic runs server-side
-- **Data Persistence**: PostgreSQL database for user data and game history
+- **Data Persistence**: PostgreSQL with Prisma ORM for user data and game history
 
 ## Socket Events
 
