@@ -6,6 +6,7 @@ import { filterChatMessage } from '../utils/contentFilter';
 import { AuthenticatedSocket, requireAuthentication, requireRoomAccess, isGuest } from '../auth/middleware';
 import { recordGameHistory, getProfile } from '../auth/database';
 import { computeDelta, shouldSendFullState } from '../utils/delta';
+import { logger } from '../utils/logger';
 
 export class SocketHandlers {
   /**
@@ -315,9 +316,9 @@ export class SocketHandlers {
       socket.emit('ERROR', { message: 'Player not found' });
       return;
     }
-    
+
     const result = this.gameLogic.submitVote(roomId, player.id, targetId);
-    
+
     if (!result.success) {
       socket.emit('ERROR', { message: 'Failed to submit vote' });
       return;
@@ -335,7 +336,7 @@ export class SocketHandlers {
       const exiledPlayer = Object.values(room.players).find(p => p.isExiled && p.votesReceived > 0);
       if (exiledPlayer) {
         this.io.to(roomId).emit('PLAYER_EXILED', { playerId: exiledPlayer.id });
-        
+
         // Log player exile event
         const eventMessage = this.gameLogic.addSystemEvent(
           roomId,
@@ -345,6 +346,39 @@ export class SocketHandlers {
         );
         this.broadcastChatMessage(roomId, eventMessage);
       }
+    }
+
+    // Record game history if game finished
+    if (room && room.status === 'FINISHED' && room.gameStartedAt) {
+      logger.debug('[GAME_HISTORY] Game finished, recording history for all players');
+      const durationMinutes = Math.round((Date.now() - room.gameStartedAt) / 60000);
+
+      // Record history for each authenticated player
+      for (const player of Object.values(room.players)) {
+        logger.debug(`[GAME_HISTORY] Player: ${player.name}, isGuest: ${player.isGuest}, id: ${player.id}`);
+        if (!player.isGuest) {
+          logger.debug(`[GAME_HISTORY] Recording history for player ${player.id}`);
+          recordGameHistory({
+            roomId: room.roomId,
+            profileId: player.id,
+            playerName: player.name,
+            gameStatus: 'FINISHED',
+            wasExiled: player.isExiled,
+            survived: !player.isExiled,
+            finalRound: room.round,
+            playersCount: Object.keys(room.players).length,
+            bunkerCapacity: room.bunker?.capacity || 0,
+            catastropheId: room.catastrophe?.id,
+            durationMinutes,
+          }).catch((error) => {
+            console.error(`Failed to record game history for player ${player.id}:`, error);
+          });
+        } else {
+          logger.debug(`[GAME_HISTORY] Skipping guest player ${player.id}`);
+        }
+      }
+    } else {
+      logger.debug(`[GAME_HISTORY] Not recording - room: ${!!room}, status: ${room?.status}, gameStartedAt: ${!!room?.gameStartedAt}`);
     }
   }
 

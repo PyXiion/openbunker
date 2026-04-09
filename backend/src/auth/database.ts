@@ -115,9 +115,9 @@ export async function createOrUpdateUserStats(userId: string): Promise<UserStats
   }
 }
 
-export async function recordGameHistory(gameData: {
+export interface GameHistoryData {
   roomId: string;
-  profileId: string;
+  profileId: string | undefined;
   playerName: string;
   gameStatus: string;
   wasExiled: boolean;
@@ -127,39 +127,43 @@ export async function recordGameHistory(gameData: {
   bunkerCapacity: number;
   catastropheId?: string;
   durationMinutes?: number;
-}): Promise<void> {
+}
+
+export async function recordGameHistory(gameData: GameHistoryData): Promise<void> {
+  console.log('[GAME_HISTORY_DB] recordGameHistory called with:', {
+    profileId: gameData.profileId,
+    playerName: gameData.playerName,
+    gameStatus: gameData.gameStatus,
+  });
+
+  // Skip recording for guest players (no profileId)
+  if (!gameData.profileId) {
+    console.log('[GAME_HISTORY_DB] Skipping - no profileId');
+    return;
+  }
+
+  const { profileId, ...historyData } = gameData;
+
   try {
     await prisma.$transaction(async (tx) => {
       // Insert game history
       await tx.gameHistory.create({
-        data: {
-          roomId: gameData.roomId,
-          profileId: gameData.profileId,
-          playerName: gameData.playerName,
-          gameStatus: gameData.gameStatus,
-          wasExiled: gameData.wasExiled,
-          survived: gameData.survived,
-          finalRound: gameData.finalRound,
-          playersCount: gameData.playersCount,
-          bunkerCapacity: gameData.bunkerCapacity,
-          catastropheId: gameData.catastropheId,
-          durationMinutes: gameData.durationMinutes,
-        },
+        data: { profileId, ...historyData },
       });
 
-      // Calculate new survival rate
-      const allGames = await tx.gameHistory.findMany({
-        where: { profileId: gameData.profileId },
-      });
+      // Calculate new survival rate using aggregation (more efficient than fetching all games)
+      const [totalGames, survivedGames] = await Promise.all([
+        tx.gameHistory.count({ where: { profileId } }),
+        tx.gameHistory.count({ where: { profileId, survived: true } }),
+      ]);
 
-      const survivedGames = allGames.filter(g => g.survived).length;
-      const survivalRate = allGames.length > 0 
-        ? Number((survivedGames * 100.0 / allGames.length).toFixed(2))
+      const survivalRate = totalGames > 0
+        ? Number((survivedGames * 100.0 / totalGames).toFixed(2))
         : 0;
 
       // Update user stats
       await tx.userStats.upsert({
-        where: { profileId: gameData.profileId },
+        where: { profileId },
         update: {
           gamesPlayed: { increment: 1 },
           gamesWon: gameData.survived ? { increment: 1 } : undefined,
@@ -167,7 +171,7 @@ export async function recordGameHistory(gameData: {
           bunkerSurvivalRate: survivalRate,
         },
         create: {
-          profileId: gameData.profileId,
+          profileId,
           gamesPlayed: 1,
           gamesWon: gameData.survived ? 1 : 0,
           totalPlaytimeMinutes: gameData.durationMinutes || 0,
@@ -201,5 +205,19 @@ export async function cleanupOldGuestProfiles(daysOld?: number): Promise<number>
   } catch (error) {
     logger.error('Error cleaning up guest profiles:', { error: error instanceof Error ? error.message : String(error) });
     return 0;
+  }
+}
+
+export async function getGameHistory(userId: string, limit: number = 20): Promise<any[]> {
+  try {
+    const history = await prisma.gameHistory.findMany({
+      where: { profileId: userId },
+      orderBy: { playedAt: 'desc' },
+      take: limit,
+    });
+    return history;
+  } catch (error) {
+    logger.error('Error fetching game history:', { error: error instanceof Error ? error.message : String(error) });
+    return [];
   }
 }

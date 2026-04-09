@@ -334,4 +334,31 @@ export class AuthService {
       throw error;
     }
   }
+
+  async getGameHistory(limit: number = 20): Promise<any[]> {
+    logger.log('AuthService.getGameHistory called');
+    const token = this.getAuthToken();
+    if (!token) {
+      logger.error('AuthService.getGameHistory: No token found');
+      throw new Error('Not authenticated');
+    }
+
+    logger.log(`AuthService.getGameHistory: Fetching from ${this.config.public.backendUrl}/api/auth/game-history?limit=${limit}`);
+    const response = await fetch(`${this.config.public.backendUrl}/api/auth/game-history?limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    logger.log(`AuthService.getGameHistory: Response status ${response.status}`);
+    if (!response.ok) {
+      logger.error('AuthService.getGameHistory: Failed to fetch');
+      throw new Error('Failed to fetch game history');
+    }
+
+    const result = await response.json();
+    logger.log(`AuthService.getGameHistory: Received ${result.history?.length || 0} game history records`);
+    return result.history || [];
+  }
 }

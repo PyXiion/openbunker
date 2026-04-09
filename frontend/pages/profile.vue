@@ -151,6 +151,75 @@
               {{ $t('profile.backToHome') }}
             </TechButton>
           </div>
+
+          <!-- User Statistics -->
+          <div v-if="user && !guestUser" class="mt-8">
+            <div class="tech-tile-header mb-4">{{ $t('profile.statistics') }}</div>
+            <div v-if="isLoadingStats" class="p-4 border-2 border-contrast/30 bg-base">
+              <p class="text-contrast/70">{{ $t('profile.loading') }}</p>
+            </div>
+            <div v-else-if="userStats" class="tech-grid grid-cols-2 gap-4">
+              <div class="p-4 border-2 border-contrast/50 bg-base">
+                <div class="text-sm text-contrast/70">{{ $t('profile.gamesPlayed') }}</div>
+                <div class="text-2xl font-bold">{{ userStats.gamesPlayed || 0 }}</div>
+              </div>
+              <div class="p-4 border-2 border-contrast/50 bg-base">
+                <div class="text-sm text-contrast/70">{{ $t('profile.gamesWon') }}</div>
+                <div class="text-2xl font-bold">{{ userStats.gamesWon || 0 }}</div>
+              </div>
+              <div class="p-4 border-2 border-contrast/50 bg-base">
+                <div class="text-sm text-contrast/70">{{ $t('profile.survivalRate') }}</div>
+                <div class="text-2xl font-bold">{{ userStats.bunkerSurvivalRate || 0 }}%</div>
+              </div>
+              <div class="p-4 border-2 border-contrast/50 bg-base">
+                <div class="text-sm text-contrast/70">{{ $t('profile.totalPlaytime') }}</div>
+                <div class="text-2xl font-bold">{{ userStats.totalPlaytimeMinutes || 0 }} {{ $t('profile.minutes') }}</div>
+              </div>
+            </div>
+            <div v-else class="p-4 border-2 border-contrast/30 bg-base">
+              <p class="text-contrast/70">{{ $t('profile.noStatsYet') }}</p>
+            </div>
+          </div>
+
+          <!-- Game History -->
+          <div v-if="user && !guestUser" class="mt-8">
+            <div class="tech-tile-header mb-4">{{ $t('profile.gameHistory') }}</div>
+            <div v-if="isLoadingHistory" class="p-4 border-2 border-contrast/30 bg-base">
+              <p class="text-contrast/70">{{ $t('profile.loading') }}</p>
+            </div>
+            <div v-else-if="gameHistory.length === 0" class="p-4 border-2 border-contrast/30 bg-base">
+              <p class="text-contrast/70">{{ $t('profile.noGamesPlayed') }}</p>
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="game in gameHistory"
+                :key="game.id"
+                class="p-4 border-2 border-contrast/50 bg-base hover:border-accent/50 transition-colors"
+              >
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="text-sm font-mono text-contrast/70">
+                      {{ formatDate(game.playedAt) }}
+                    </div>
+                    <div class="text-lg font-bold">
+                      {{ game.survived ? $t('profile.survived') : $t('profile.exiled') }}
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-mono text-contrast/70">
+                      {{ $t('profile.round') }} {{ game.finalRound }}
+                    </div>
+                    <div class="text-sm font-mono text-contrast/70">
+                      {{ game.durationMinutes }} {{ $t('profile.minutes') }}
+                    </div>
+                  </div>
+                </div>
+                <div class="text-sm text-contrast/70">
+                  {{ game.playersCount }} {{ $t('profile.players') }} • {{ game.bunkerCapacity }} {{ $t('profile.capacity') }}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -175,6 +244,10 @@ const isEditingUsername = ref(false);
 const editingUsername = ref('');
 const isLoading = ref(false);
 const isInitialLoading = ref(true);
+const isLoadingHistory = ref(false);
+const isLoadingStats = ref(false);
+const gameHistory = ref<any[]>([]);
+const userStats = ref<any>(null);
 const error = ref('');
 
 const handleLogout = async () => {
@@ -276,11 +349,93 @@ const cancelEditUsername = () => {
   isEditingUsername.value = false;
 };
 
+const formatDate = (date: string) => {
+  const d = new Date(date);
+  return d.toLocaleDateString();
+};
+
+const fetchGameHistory = async () => {
+  console.log('[PROFILE] fetchGameHistory called, user:', !!user.value, 'guestUser:', !!guestUser.value);
+  if (!user.value || guestUser.value) return;
+
+  isLoadingHistory.value = true;
+  try {
+    console.log('[PROFILE] Fetching game history directly from API');
+    const config = useRuntimeConfig();
+    const token = auth.getAuthToken();
+
+    if (!token) {
+      console.error('[PROFILE] No token found');
+      return;
+    }
+
+    const response = await fetch(`${config.public.backendUrl}/api/auth/game-history?limit=20`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[PROFILE] Failed to fetch game history, status:', response.status);
+      return;
+    }
+
+    const result = await response.json();
+    gameHistory.value = result.history || [];
+    console.log('[PROFILE] Game history fetched:', gameHistory.value.length, 'records');
+  } catch (err) {
+    console.error('[PROFILE] Failed to fetch game history:', err);
+  } finally {
+    isLoadingHistory.value = false;
+  }
+};
+
+const fetchUserStats = async () => {
+  console.log('[PROFILE] fetchUserStats called, user:', !!user.value, 'guestUser:', !!guestUser.value);
+  if (!user.value || guestUser.value) return;
+
+  isLoadingStats.value = true;
+  try {
+    console.log('[PROFILE] Fetching user stats from API');
+    const config = useRuntimeConfig();
+    const token = auth.getAuthToken();
+
+    if (!token) {
+      console.error('[PROFILE] No token found');
+      return;
+    }
+
+    const response = await fetch(`${config.public.backendUrl}/api/auth/stats`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('[PROFILE] Failed to fetch user stats, status:', response.status);
+      return;
+    }
+
+    const result = await response.json();
+    userStats.value = result.stats || null;
+    console.log('[PROFILE] User stats fetched:', userStats.value);
+  } catch (err) {
+    console.error('[PROFILE] Failed to fetch user stats:', err);
+  } finally {
+    isLoadingStats.value = false;
+  }
+};
+
 // Redirect to home if not authenticated
 onMounted(() => {
   isInitialLoading.value = false;
   if (!user.value && !guestUser.value) {
     navigateTo('/');
+  } else if (user.value && !guestUser.value) {
+    fetchGameHistory();
+    fetchUserStats();
   }
 });
 </script>

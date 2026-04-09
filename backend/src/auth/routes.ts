@@ -1,6 +1,6 @@
 import express from 'express';
 import * as CasdoorSDK from 'casdoor-nodejs-sdk';
-import { createProfile, updateProfile, getProfile } from './database';
+import { createProfile, updateProfile, getProfile, getGameHistory, getUserStats } from './database';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
 
@@ -308,15 +308,15 @@ router.put('/username', async (req, res) => {
 router.post('/casdoor/webhook', async (req, res) => {
   try {
     const { eventType, user } = req.body;
-    
+
     if (!user || !user.id) {
       return res.status(400).json({ error: 'Invalid webhook payload' });
     }
-    
+
     // Handle user update events
     if (eventType === 'updateUser') {
       const profile = await getProfile(user.id);
-      
+
       if (profile) {
         // Sync username, email, avatar from Casdoor
         await updateProfile(user.id, {
@@ -326,11 +326,62 @@ router.post('/casdoor/webhook', async (req, res) => {
         });
       }
     }
-    
+
     res.json({ success: true });
   } catch (error) {
     logger.error('Casdoor webhook error:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: 'Failed to process webhook' });
+  }
+});
+
+// Get game history for authenticated user
+router.get('/game-history', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const casdoor = getCasdoor();
+    const user = await casdoor.parseJwtToken(token);
+
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const history = await getGameHistory(user.id, limit);
+
+    res.json({ history });
+  } catch (error) {
+    logger.error('Game history fetch error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to fetch game history' });
+  }
+});
+
+// Get user statistics for authenticated user
+router.get('/stats', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const casdoor = getCasdoor();
+    const user = await casdoor.parseJwtToken(token);
+
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const stats = await getUserStats(user.id);
+
+    res.json({ stats });
+  } catch (error) {
+    logger.error('User stats fetch error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to fetch user stats' });
   }
 });
 

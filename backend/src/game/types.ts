@@ -115,6 +115,7 @@ export interface GameRoom {
   language: string;
   settings?: GameSettings;
   chatHistory: ChatMessage[];
+  gameStartedAt?: number;
 }
 
 /**

@@ -241,6 +241,7 @@ export class GameLogic {
 
     // Initialize game
     room.status = 'PLAYING';
+    room.gameStartedAt = Date.now();
     room.catastrophe = this.getRandomCatastrophe(room.language || 'en');
     room.bunker = this.generateBunkerStats(playerCount, room.language || 'en', room.settings?.bunkerCapacity);
     room.currentTurnIndex = 0;
