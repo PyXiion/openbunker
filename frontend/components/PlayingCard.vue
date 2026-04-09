@@ -135,13 +135,9 @@ const stopDrag = () => {
 
 const close = () => {
   stopDrag();
-  isExiting.value = true;
-  setTimeout(() => {
-    isClosing.value = true;
-    emit('close');
-    isExiting.value = false;
-    isClosing.value = false;
-  }, 150);
+  isClosing.value = true;
+  emit('close');
+  isClosing.value = false;
 };
 
 onUnmounted(() => {
@@ -172,40 +168,7 @@ onUnmounted(() => {
   z-index: 10000;
 }
 
-/* Card Animation - Enter */
-.floating:not(.card-exiting) {
-  animation: cardPop 0.2s ease-out;
-}
-
-/* Card Animation - Exit */
-.card-exiting {
-  animation: cardExit 0.15s ease-in forwards;
-}
-
-@keyframes cardPop {
-  0% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  70% {
-    transform: scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes cardExit {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-}
+/* No animations - style guide compliance */
 
 .close-btn {
   position: absolute;
@@ -219,12 +182,12 @@ onUnmounted(() => {
   font-weight: bold;
   font-size: 18px;
   line-height: 1;
-  cursor: pointer;
+  cursor: crosshair;
   z-index: 10001;
 }
 
 .playing-card.is-dragging {
-  cursor: grabbing;
+  cursor: crosshair;
   opacity: 0.95;
 }
 
@@ -234,7 +197,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 24px;
-  cursor: grab;
+  cursor: crosshair;
   z-index: 10002;
   display: flex;
   align-items: center;
@@ -247,11 +210,11 @@ onUnmounted(() => {
 }
 
 .drag-handle:active {
-  cursor: grabbing;
+  cursor: crosshair;
 }
 
 .playing-card.is-dragging .drag-handle {
-  cursor: grabbing;
+  cursor: crosshair;
 }
 
 .drag-indicator {

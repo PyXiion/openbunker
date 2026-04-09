@@ -1,5 +1,5 @@
 <template>
-  <div class="tech-tile mb-4">
+  <div class="tech-tile mb-4 tech-boot-fade">
     <div class="tech-grid grid-cols-3 gap-4">
       <div>
         <span class="font-bold uppercase">{{ $t('components.roomHeader.room') }}:</span> {{ gameStore.room?.roomId }}

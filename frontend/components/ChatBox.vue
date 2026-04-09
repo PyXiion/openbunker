@@ -2,27 +2,29 @@
   <div 
     ref="chatContainer"
     class="chat-container tech-tile" 
-    :class="{ 'is-collapsed': isCollapsed, 'is-dragging': isDragging, 'is-resizing': isResizing }"
+    :class="{ 'is-collapsed': isCollapsed }"
     :style="containerStyle"
   >
     <div 
-      class="tech-tile-header flex justify-between items-center cursor-move" 
-      @mousedown="startDrag"
-      @click="handleHeaderClick"
+      class="tech-tile-header flex justify-between items-center cursor-pointer" 
+      @click="toggleCollapse"
     >
       <div class="flex items-center gap-2">
         <span>{{ $t('components.chat.title') }}</span>
-        <span v-if="unreadCount > 0" class="bg-accent text-base px-2 py-0.5 text-xs">{{ unreadCount }}</span>
+        <span v-if="unreadCount > 0" class="bg-accent text-base px-2 py-0.5 text-xs tech-blink">{{ unreadCount }}</span>
       </div>
-      <span class="text-xs">{{ isCollapsed ? '[+]' : '[-]' }}</span>
+      <div class="flex items-center gap-2">
+        <span class="text-xs">{{ isCollapsed ? '[+]' : '[-]' }}</span>
+        <span class="tui-fkey-hint">[C]</span>
+      </div>
     </div>
     
     <div v-show="!isCollapsed" class="flex flex-col" style="height: calc(100% - 40px); overflow: hidden;">
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto border-2 border-contrast bg-base mb-2 p-2 space-y-2 font-mono text-sm min-h-0">
+      <div ref="messagesContainer" class="flex-1 overflow-y-auto border-2 border-contrast bg-base mb-2 p-2 space-y-2 font-mono text-sm min-h-0 tui-scroll-down">
         <div
           v-for="message in chatHistory"
           :key="message.id"
-          class="border-l-2 pl-2 break-words"
+          class="border-l-2 pl-2 break-words tech-data-stream"
           :class="getMessageClasses(message)"
         >
           <div class="flex justify-between text-xs opacity-75">
@@ -44,9 +46,10 @@
       
       <div class="flex gap-2 flex-shrink-0" style="padding-right: 16px; margin-bottom: 8px;">
         <input
+          ref="inputRef"
           v-model="newMessage"
           type="text"
-          class="flex-1 border-2 border-contrast bg-base p-2 font-mono text-sm"
+          class="border-2 border-contrast bg-base p-2 font-mono text-sm flex-1 tui-prompt"
           :placeholder="$t('components.chat.placeholder')"
           maxlength="500"
           @keyup.enter="sendMessage"
@@ -61,16 +64,6 @@
         </button>
       </div>
       
-      <!-- Resize Handle -->
-      <div 
-        v-if="!isCollapsed && !isMobile"
-        class="resize-handle flex-shrink-0"
-        @mousedown="startResize"
-      >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-          <path d="M9 9L12 12M6 9L9 12M3 9L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>
     </div>
   </div>
 </template>
@@ -79,6 +72,8 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useGameStore } from '~/stores/game';
 import { useSocket } from '~/composables/useSocket';
+import { useHotkeys } from '~/composables/useHotkeys';
+import { logger } from '~/utils/logger';
 
 const props = defineProps<{
   roomId: string;
@@ -95,36 +90,24 @@ const messagesContainer = ref<HTMLElement | null>(null);
 const unreadCount = ref(0);
 const chatContainer = ref<HTMLElement | null>(null);
 
-// Draggable and resizable state
-const position = ref({ x: 0, y: 0 });
-const size = ref({ width: 320, height: 400 });
-const isDragging = ref(false);
-const isResizing = ref(false);
-const dragStart = ref({ x: 0, y: 0 });
-const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
-const isMobile = ref(false);
-const hasDragged = ref(false);
-const dragThreshold = 5; // pixels
+
+// Hotkeys
+useHotkeys([
+  {
+    key: 'c',
+    handler: () => toggleCollapse(),
+    preventDefault: true
+  }
+]);
 
 // Computed styles for positioning and sizing
 const containerStyle = computed(() => {
-  if (isMobile.value) {
-    // Mobile: use fixed positioning (current behavior)
-    return {
-      position: 'fixed' as const,
-      bottom: '1rem',
-      right: '1rem',
-      width: '20rem'
-    };
-  }
-  
-  // Desktop: use absolute positioning with saved/custom values
   return {
-    position: 'absolute' as const,
-    left: `${position.value.x}px`,
-    top: `${position.value.y}px`,
-    width: isCollapsed.value ? '320px' : `${size.value.width}px`,
-    height: isCollapsed.value ? 'auto' : `${size.value.height}px`,
+    position: 'fixed' as const,
+    bottom: '1rem',
+    right: '1rem',
+    width: isCollapsed.value ? '320px' : '320px',
+    height: isCollapsed.value ? 'auto' : '400px',
     zIndex: 50
   };
 });
@@ -152,172 +135,10 @@ watch(chatHistory, async (newHistory, oldHistory) => {
 }, { deep: true });
 
 onMounted(() => {
-  detectMobile();
-  loadPersistedState();
   scrollToBottom();
-  
-  // Add global event listeners
-  window.addEventListener('mousemove', handleMouseMove);
-  window.addEventListener('mouseup', handleMouseUp);
-  window.addEventListener('resize', handleWindowResize);
 });
 
-onUnmounted(() => {
-  // Clean up event listeners
-  window.removeEventListener('mousemove', handleMouseMove);
-  window.removeEventListener('mouseup', handleMouseUp);
-  window.removeEventListener('resize', handleWindowResize);
-});
 
-function detectMobile() {
-  isMobile.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-}
-
-function loadPersistedState() {
-  if (isMobile.value) return;
-  
-  try {
-    const saved = localStorage.getItem('chatbox-state');
-    if (saved) {
-      const state = JSON.parse(saved);
-      position.value = state.position || { x: 0, y: 0 };
-      size.value = state.size || { width: 320, height: 400 };
-      
-      // Ensure position is within viewport
-      constrainToViewport();
-    } else {
-      // Default position (bottom-right)
-      setDefaultPosition();
-    }
-  } catch (error) {
-    console.error('Error loading chatbox state:', error);
-    setDefaultPosition();
-  }
-}
-
-function setDefaultPosition() {
-  const margin = 16;
-  const elementWidth = isCollapsed.value ? 320 : size.value.width;
-  const elementHeight = isCollapsed.value ? 40 : size.value.height;
-  
-  position.value = {
-    x: window.innerWidth - elementWidth - margin,
-    y: window.innerHeight - elementHeight - margin
-  };
-}
-
-function savePersistedState() {
-  if (isMobile.value) return;
-  
-  try {
-    const state = {
-      position: position.value,
-      size: size.value
-    };
-    localStorage.setItem('chatbox-state', JSON.stringify(state));
-  } catch (error) {
-    console.error('Error saving chatbox state:', error);
-  }
-}
-
-function startDrag(event: MouseEvent) {
-  if (isMobile.value) return;
-  
-  event.preventDefault();
-  event.stopPropagation();
-  
-  isDragging.value = true;
-  hasDragged.value = false;
-  dragStart.value = {
-    x: event.clientX - position.value.x,
-    y: event.clientY - position.value.y
-  };
-}
-
-function startResize(event: MouseEvent) {
-  if (isMobile.value) return;
-  
-  event.preventDefault();
-  event.stopPropagation();
-  
-  isResizing.value = true;
-  resizeStart.value = {
-    x: event.clientX,
-    y: event.clientY,
-    width: size.value.width,
-    height: size.value.height
-  };
-}
-
-function handleMouseMove(event: MouseEvent) {
-  if (isDragging.value) {
-    const newX = event.clientX - dragStart.value.x;
-    const newY = event.clientY - dragStart.value.y;
-    
-    // Check if we've moved beyond the threshold
-    const deltaX = Math.abs(newX - (position.value.x));
-    const deltaY = Math.abs(newY - (position.value.y));
-    
-    if (deltaX > dragThreshold || deltaY > dragThreshold) {
-      hasDragged.value = true;
-    }
-    
-    position.value = {
-      x: Math.max(0, Math.min(newX, window.innerWidth - (isCollapsed.value ? 320 : size.value.width))),
-      y: Math.max(0, Math.min(newY, window.innerHeight - (isCollapsed.value ? 40 : size.value.height)))
-    };
-  } else if (isResizing.value) {
-    const deltaX = event.clientX - resizeStart.value.x;
-    const deltaY = event.clientY - resizeStart.value.y;
-    
-    const newWidth = Math.max(320, Math.min(resizeStart.value.width + deltaX, window.innerWidth * 0.8));
-    const newHeight = Math.max(200, Math.min(resizeStart.value.height + deltaY, window.innerHeight * 0.8));
-    
-    size.value = { width: newWidth, height: newHeight };
-    
-    // Adjust position if resizing would go out of bounds
-    constrainToViewport();
-  }
-}
-
-function handleMouseUp() {
-  if (isDragging.value || isResizing.value) {
-    isDragging.value = false;
-    isResizing.value = false;
-    savePersistedState();
-    
-    // Reset drag flag after a short delay to allow click events to complete
-    setTimeout(() => {
-      hasDragged.value = false;
-    }, 10);
-  }
-}
-
-function handleWindowResize() {
-  if (!isMobile.value) {
-    constrainToViewport();
-  }
-}
-
-function constrainToViewport() {
-  const elementWidth = isCollapsed.value ? 320 : size.value.width;
-  const elementHeight = isCollapsed.value ? 40 : size.value.height;
-  
-  const maxX = window.innerWidth - elementWidth;
-  const maxY = window.innerHeight - elementHeight;
-  
-  position.value = {
-    x: Math.max(0, Math.min(position.value.x, maxX)),
-    y: Math.max(0, Math.min(position.value.y, maxY))
-  };
-}
-
-function handleHeaderClick() {
-  // Only toggle collapse if we haven't dragged
-  if (!hasDragged.value) {
-    toggleCollapse();
-  }
-}
 
 function scrollToBottom() {
   if (messagesContainer.value) {
@@ -393,42 +214,10 @@ function getEventIcon(eventType?: string): string {
   overflow: hidden;
 }
 
-.chat-container:not(.is-dragging):not(.is-resizing) {
-  transition: width 0.2s ease, height 0.2s ease;
-}
-
 .is-collapsed {
   min-height: auto;
 }
 
-.is-dragging, .is-resizing {
-  opacity: 0.9;
-  user-select: none;
-}
-
-.resize-handle {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
-  color: var(--contrast-color, #e5e5e5);
-  opacity: 0.6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--base-color, #1a1a1a);
-  border: 2px solid var(--contrast-color, #e5e5e5);
-  border-top: none;
-  border-left: none;
-  z-index: 10;
-}
-
-.resize-handle:hover {
-  opacity: 1;
-  color: var(--accent-color, #ff4444);
-}
 
 /* Markdown styling to match tech aesthetic */
 :deep(.chat-message-content) {
@@ -463,7 +252,6 @@ function getEventIcon(eventType?: string): string {
   background: var(--contrast-color, #e5e5e5);
   color: var(--base-color, #1a1a1a);
   padding: 0.125rem 0.25rem;
-  border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
   font-size: 0.875em;
 }
@@ -472,7 +260,6 @@ function getEventIcon(eventType?: string): string {
   background: var(--contrast-color, #e5e5e5);
   color: var(--base-color, #1a1a1a);
   padding: 0.5rem;
-  border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
   font-size: 0.875em;
   overflow-x: auto;

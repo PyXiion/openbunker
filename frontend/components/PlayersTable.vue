@@ -1,5 +1,5 @@
 <template>
-  <div class="tech-tile relative">
+  <div class="tech-tile relative tech-boot-fade">
     <div class="tech-tile-header">{{ $t('components.playersTable.players') }}</div>
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
       <div 
@@ -12,7 +12,8 @@
           class="font-bold uppercase truncate flex justify-between text-xs"
           :class="getNameColor(player)"
         >
-          {{ player.name }}
+          <span v-if="isCurrentTurn(player.id)" class="tui-cursor">►</span>
+          <span :class="{ 'tech-cursor-blink': isCurrentTurn(player.id) }">{{ player.name }}</span>
           <span v-if="isCurrentUser(player)" class="font-bold" :class="getYouBadgeColor(player)">[{{ $t('components.playersTable.you') }}]</span>
         </div>
         <div class="text-xs leading-tight" :class="getStatusColor(player)">
@@ -84,6 +85,7 @@ function getCardClasses(player: Player): Record<string, boolean> {
   return {
     'border-contrast': !isCurrentTurn(player.id),
     'bg-accent border-accent': isCurrentTurn(player.id),
+    'tech-border-flash': isCurrentTurn(player.id),
   };
 }
 
@@ -101,12 +103,18 @@ function getStatusColor(player: Player): string {
 }
 
 function showCardDetail(type: string, trait: Trait, rect: DOMRect) {
-  const footerId = `ID: ${type.slice(0,3).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
-  selectedCard.value = { type, trait, footerId };
-  cardPosition.value = {
-    x: rect.right + 20,
-    y: rect.top + rect.height / 2 - 150
-  };
+  console.log('[PlayersTable] showCardDetail called', { type, trait: trait.name, rect });
+  try {
+    const footerId = `ID: ${type.slice(0,3).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+    selectedCard.value = { type, trait, footerId };
+    cardPosition.value = {
+      x: rect.right + 20,
+      y: rect.top + rect.height / 2 - 150
+    };
+    console.log('[PlayersTable] Card detail set successfully');
+  } catch (error) {
+    console.error('[PlayersTable] Error in showCardDetail:', error);
+  }
 }
 
 function closeCardDetail() {

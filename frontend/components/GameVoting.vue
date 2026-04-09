@@ -1,19 +1,21 @@
 <template>
-  <div class="tech-tile">
+  <div class="tech-tile tech-boot-fade">
     <div class="tech-tile-header">{{ $t('components.gameVoting.votingPhase') }}</div>
     <div class="space-y-2">
       <div 
         v-for="player in votablePlayers" 
         :key="player.id"
-        class="border border-contrast p-2 flex items-center gap-3"
+        class="border-2 border-contrast p-2 flex items-center gap-3"
       >
+        <span class="tui-cursor">►</span>
         <button 
           @click="$emit('vote', player.id)"
           :disabled="hasVoted"
-          class="tech-button text-sm px-3 py-1 disabled:opacity-50 shrink-0"
+          class="tech-button text-sm"
         >
-          {{ player.name }}
+          {{ $t('components.gameVoting.vote') }}
         </button>
+        {{ player.name }}
         <div class="flex-1 flex flex-wrap gap-1 text-xs">
           <span 
             v-for="entry in getRevealedTraits(player.traits)" 

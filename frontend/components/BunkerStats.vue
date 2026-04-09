@@ -1,14 +1,30 @@
 <template>
-  <div class="tech-tile">
+  <div class="tech-tile tech-scan-bar">
     <div class="tech-tile-header">{{ $t('components.bunkerStats.bunkerStatus') }}</div>
     <div v-if="bunker" class="space-y-4">
       <!-- Stats Grid -->
       <div class="tech-grid-tight grid-cols-2 gap-2 text-sm">
-        <div>{{ $t('components.bunkerStats.capacity') }}: {{ activePlayerCount }}/{{ bunker.capacity }}</div>
+        <div class="border-2 border-contrast p-2 bg-base">
+          <div class="mb-1">{{ $t('components.bunkerStats.capacity') }}: {{ activePlayerCount }}/{{ bunker.capacity }}</div>
+          <div class="tui-progress">
+            <span class="tui-progress-bar">
+              <span class="tui-progress-fill" :style="{ width: `${(activePlayerCount / bunker.capacity) * 100}%` }"></span>
+              <span class="tui-progress-empty" :style="{ width: `${100 - (activePlayerCount / bunker.capacity) * 100}%` }"></span>
+            </span>
+          </div>
+        </div>
         <div>{{ $t('components.bunkerStats.food') }}: {{ bunker.food }} {{ $t('components.bunkerStats.days') }}</div>
         <div>{{ $t('components.bunkerStats.water') }}: {{ bunker.water }} {{ $t('components.bunkerStats.days') }}</div>
         <div>{{ $t('components.bunkerStats.medicine') }}: {{ bunker.medicine }} {{ $t('components.bunkerStats.units') }}</div>
-        <div class="col-span-2">{{ $t('components.bunkerStats.power') }}: {{ bunker.power }}%</div>
+        <div class="col-span-2 border-2 border-contrast p-2 bg-base">
+          <div class="mb-1">{{ $t('components.bunkerStats.power') }}: {{ bunker.power }}%</div>
+          <div class="tui-progress">
+            <span class="tui-progress-bar">
+              <span class="tui-progress-fill" :style="{ width: `${bunker.power}%` }"></span>
+              <span class="tui-progress-empty" :style="{ width: `${100 - bunker.power}%` }"></span>
+            </span>
+          </div>
+        </div>
       </div>
       
       <!-- Bunker Map Schematic -->
@@ -184,18 +200,14 @@ function openRoomCard(room: BunkerRoom, event: MouseEvent) {
   font-size: 10px;
   font-weight: bold;
   position: relative;
-  transition: all 0.15s ease;
 }
 
 .room:hover {
   @apply bg-contrast text-base;
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
 }
 
 .room:active {
-  transform: translate(0, 0);
-  box-shadow: none;
+  @apply bg-accent text-base;
 }
 
 .room-symbol {
@@ -230,16 +242,5 @@ function openRoomCard(room: BunkerRoom, event: MouseEvent) {
 /* Revealed room - solid border, interactive */
 .room-revealed {
   border-style: solid;
-}
-
-.room-revealed:hover {
-  @apply bg-contrast text-base;
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
-}
-
-.room-revealed:active {
-  transform: translate(0, 0);
-  box-shadow: none;
 }
 </style>

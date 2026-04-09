@@ -1,5 +1,5 @@
 <template>
-  <div class="tech-tile relative">
+  <div class="tech-tile relative tech-boot-fade">
     <div class="tech-tile-header">{{ $t('components.gameFinished.gameFinished') }}</div>
     <div class="text-center space-y-8">
       <!-- Survivors -->

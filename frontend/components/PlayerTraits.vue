@@ -3,10 +3,9 @@
     <div 
       v-for="entry in traitEntries" 
       :key="entry.type"
-      class="cursor-pointer hover:border-accent transition-colors"
+      class="border-2 border-contrast hover:border-accent cursor-crosshair"
       :class="[
         compact ? 'p-1 text-xs' : 'p-3',
-        borderColorClass,
         { 
           'bg-red-500/10': entry.trait.isRevealed && props.isExiled,
           'bg-base': !entry.trait.isRevealed 
@@ -24,11 +23,11 @@
         <span v-if="!entry.trait.isRevealed" class="text-accent">{{ compact ? '?' : `[${$t('components.playerHand.hidden')}]` }}</span>
       </div>
       <div v-if="entry.trait.isRevealed && !compact" class="mt-1">
-        <div class="font-mono text-xs">{{ entry.trait.name }}</div>
+        <div class="font-mono text-xs tech-decode">{{ entry.trait.name }}</div>
         <div class="text-xs opacity-75">{{ entry.trait.description }}</div>
       </div>
       <div v-else-if="entry.trait.isRevealed && compact" class="leading-tight">
-        <div class="font-mono truncate">{{ entry.trait.name }}</div>
+        <div class="font-mono truncate tech-decode">{{ entry.trait.name }}</div>
       </div>
     </div>
   </div>
@@ -74,19 +73,27 @@ const traitEntries = computed<TraitEntry[]>(() => {
   }));
 });
 
-const borderColorClass = computed(() => {
-  return props.isExiled ? 'border border-red-500/50' : 'border border-contrast/50';
-});
-
 const emit = defineEmits<{
   showDetail: [type: string, trait: Trait, rect: DOMRect];
 }>();
 
 const handleClick = (type: string, trait: Trait, event: MouseEvent) => {
+  console.log('[PlayerTraits] handleClick called', { type, compact: props.compact });
   if (props.compact) {
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    emit('showDetail', type, trait, rect);
+    try {
+      const target = event.currentTarget as HTMLElement;
+      if (!target) {
+        console.error('[PlayerTraits] target is null');
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      console.log('[PlayerTraits] Emitting showDetail', { type, trait: trait.name, rect });
+      emit('showDetail', type, trait, rect);
+    } catch (error) {
+      console.error('[PlayerTraits] Error in handleClick:', error);
+    }
+  } else {
+    console.log('[PlayerTraits] Not compact, not emitting');
   }
 };
 </script>

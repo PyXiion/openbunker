@@ -10,26 +10,16 @@
       </span>
     </slot>
     
-    <Transition
-      name="tooltip"
-      enter-active-class="transition-all duration-200 ease-out"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition-all duration-150 ease-in"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
+    <div 
+      v-if="isVisible"
+      class="absolute z-50 w-64 p-3 text-sm font-mono tech-tile border-2 border-accent shadow-lg"
+      :class="positionClass"
+      @mouseenter="keepTooltipVisible"
+      @mouseleave="hideTooltip"
     >
-      <div 
-        v-if="isVisible"
-        class="absolute z-50 w-64 p-3 text-sm font-mono tech-tile border-2 border-accent shadow-lg"
-        :class="positionClass"
-        @mouseenter="keepTooltipVisible"
-        @mouseleave="hideTooltip"
-      >
-        <div class="tech-tile-header text-xs mb-2">{{ $t('components.tooltip.help') }}</div>
-        <div class="text-contrast/90">{{ content }}</div>
-      </div>
-    </Transition>
+      <div class="tech-tile-header text-xs mb-2">{{ $t('components.tooltip.help') }}</div>
+      <div class="text-contrast/90">{{ content }}</div>
+    </div>
   </div>
 </template>
 
@@ -92,14 +82,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.tooltip-enter-active,
-.tooltip-leave-active {
-  transition: all 0.2s ease;
-}
-
-.tooltip-enter-from,
-.tooltip-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(4px);
-}
+/* No transitions - style guide compliance */
 </style>

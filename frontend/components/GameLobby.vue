@@ -1,24 +1,39 @@
 <template>
-  <div class="tech-tile">
+  <div class="tech-tile tech-boot-fade">
     <div class="tech-tile-header">{{ $t('components.gameLobby.lobby') }}</div>
     
-    <div class="mb-4">
-      <h3 class="font-bold uppercase mb-2">
+    <div class="mb-5">
+      <h3 class="font-bold uppercase mb-3 text-contrast/90">
         {{ $t('components.gameLobby.players') }} ({{ Object.keys(gameStore.room?.players || {}).length }}/{{ GAME_CONSTANTS.MAX_PLAYERS }})
       </h3>
-      <div class="tech-grid-tight grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+      <div class="tech-grid-tight grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         <div 
           v-for="player in Object.values(gameStore.room?.players || {})" 
           :key="player.id"
-          class="border-2 border-contrast p-2 font-mono text-sm flex justify-between items-center"
+          class="tech-card flex justify-between items-center"
         >
-          <span>
-            {{ player.name }} {{ player.isHost ? `(${$t('components.gameLobby.host')})` : '' }}
-          </span>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 border-2 border-contrast flex items-center justify-center overflow-hidden bg-base">
+              <img 
+                v-if="player.avatarUrl" 
+                :src="player.avatarUrl" 
+                :alt="player.name"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full bg-contrast/10 flex items-center justify-center">
+                <span class="text-contrast font-bold text-xs">
+                  {{ player.name.charAt(0).toUpperCase() }}
+                </span>
+              </div>
+            </div>
+            <span class="truncate">
+              {{ player.name }} {{ player.isHost ? `(${$t('components.gameLobby.host')})` : '' }}
+            </span>
+          </div>
           <button 
             v-if="gameStore.currentPlayer?.isHost && !player.isHost"
             @click="kickPlayer(player.id)"
-            class="text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded px-1.5 py-0.5 ml-2 text-lg leading-none transition-colors"
+            class="tech-button text-sm px-2 py-1 ml-2"
             :title="$t('components.gameLobby.kickPlayer')"
           >
             ×
@@ -28,18 +43,18 @@
     </div>
 
     <!-- Bunker Capacity Settings - Host Only -->
-    <div v-if="gameStore.currentPlayer?.isHost" class="mb-6 border-2 border-contrast/50 p-4">
-      <h3 class="font-bold uppercase mb-3">
+    <div v-if="gameStore.currentPlayer?.isHost" class="mb-6 tech-tile">
+      <h3 class="font-bold uppercase mb-4 text-contrast/90">
         {{ $t('components.gameLobby.bunkerSettings') }}
       </h3>
       
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-4">
         <div class="flex items-center gap-3">
           <input 
             type="checkbox" 
             id="autoCapacity"
             v-model="isAutoCapacity"
-            class="w-4 h-4 accent-accent"
+            class="w-4 h-4 accent-accent focus:outline-none focus:ring-2 focus:ring-accent/50"
             @change="onAutoCapacityChange"
           />
           <label for="autoCapacity" class="font-mono text-sm">
@@ -61,7 +76,7 @@
             v-model.number="customCapacity"
             :min="minCapacity"
             :max="maxCapacity"
-            class="w-20 bg-contrast/10 border-2 border-contrast px-2 py-1 font-mono text-sm"
+            class="w-20 bg-contrast/10 border-2 border-contrast px-2 py-1 font-mono text-sm focus:outline-none focus:border-accent transition-colors"
             @change="updateCapacity"
           />
           <span class="font-mono text-sm text-accent">
@@ -74,7 +89,7 @@
         </div>
         
         <!-- First Trait to Reveal Setting -->
-        <div class="flex flex-col gap-2 mt-3">
+        <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <label for="firstTrait" class="font-mono text-sm">
               {{ $t('components.gameLobby.firstTraitToReveal') }}:
@@ -87,7 +102,7 @@
           <select 
             id="firstTrait"
             v-model="selectedFirstTrait"
-            class="w-full bg-contrast/10 border-2 border-contrast px-2 py-1 font-mono text-sm"
+            class="w-full bg-contrast/10 border-2 border-contrast px-2 py-1 font-mono text-sm focus:outline-none focus:border-accent transition-colors"
             @change="updateFirstTrait"
           >
             <option value="">{{ $t('components.gameLobby.anyTrait') }}</option>
@@ -98,12 +113,12 @@
         </div>
         
         <!-- Content Filter Setting -->
-        <div class="flex items-center gap-3 mt-3">
+        <div class="flex items-center gap-3">
           <input 
             type="checkbox" 
             id="contentFilter"
             v-model="enableContentFilter"
-            class="w-4 h-4 accent-accent"
+            class="w-4 h-4 accent-accent focus:outline-none focus:ring-2 focus:ring-accent/50"
             @change="updateContentFilter"
           />
           <label for="contentFilter" class="font-mono text-sm">
@@ -118,8 +133,8 @@
     </div>
     
     <!-- Display settings for non-hosts -->
-    <div v-else class="mb-6 border-2 border-contrast/30 p-4 space-y-2">
-      <h3 class="font-bold uppercase mb-2">
+    <div v-else class="mb-6 tech-tile space-y-3">
+      <h3 class="font-bold uppercase mb-3 text-contrast/90">
         {{ $t('components.gameLobby.bunkerSettings') }}
       </h3>
       <p class="font-mono text-sm">
@@ -144,23 +159,22 @@
       </p>
     </div>
 
-    <button 
+    <TechButton 
       v-if="gameStore.canStartGame"
       @click="$emit('start')"
-      class="tech-button"
     >
-      {{ $t('components.gameLobby.startGame') }}
-    </button>
+      {{ $t('components.gameLobby.startGame') }} <span class="tui-fkey-hint">[ENTER]</span>
+    </TechButton>
     
-    <div v-else-if="!gameStore.playerId" class="text-sm font-mono text-accent">
+    <div v-else-if="!gameStore.playerId" class="text-sm font-mono text-accent p-2 border border-accent/30 bg-accent/5 tech-pulse tech-signal-noise">
       {{ $t('components.gameLobby.reconnecting') }}
     </div>
     
-    <div v-else-if="isChoosingNewHost" class="text-sm font-mono text-accent">
+    <div v-else-if="isChoosingNewHost" class="text-sm font-mono text-accent p-2 border border-accent/30 bg-accent/5 tech-pulse tech-signal-noise">
       {{ $t('components.gameLobby.choosingNewHost', { playerName: nextHostName, seconds: remainingSeconds }) }}
     </div>
     
-    <div v-else class="text-sm font-mono">
+    <div v-else class="text-sm font-mono text-contrast/70">
       {{ gameStore.currentPlayer?.isHost 
         ? $t('components.gameLobby.waitingForPlayers', { min: GAME_CONSTANTS.MIN_PLAYERS_TO_START })
         : $t('components.gameLobby.waitingForHost') }}
@@ -169,12 +183,31 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch, onUnmounted } from 'vue';
 import { GAME_CONSTANTS } from '~/constants/game';
-import type { UpdateRoomSettings } from '~/types/settings';
+import { useGameStore } from '~/stores/game';
+import { useHotkeys } from '~/composables/useHotkeys';
+import { useSocket } from '~/composables/useSocket';
 import Tooltip from './Tooltip.vue';
+import TechButton from './TechButton.vue';
 
 const gameStore = useGameStore();
 const { kickPlayer: socketKickPlayer, updateSettings } = useSocket();
+
+const emit = defineEmits<{
+  start: [];
+  kick: [playerId: string];
+}>();
+
+// Hotkeys
+useHotkeys([
+  {
+    key: 'Enter',
+    handler: () => emit('start'),
+    condition: () => gameStore.canStartGame,
+    preventDefault: true
+  }
+]);
 
 const kickPlayer = (playerId: string) => {
   if (!gameStore.room?.roomId) return;
@@ -309,8 +342,4 @@ onUnmounted(() => {
     clearInterval(countdownInterval);
   }
 });
-
-defineEmits<{
-  start: [];
-}>();
 </script>

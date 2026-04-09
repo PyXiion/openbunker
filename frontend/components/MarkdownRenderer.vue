@@ -6,6 +6,7 @@
 import { computed } from 'vue';
 import MarkdownIt from 'markdown-it/dist/markdown-it.min.js';
 import DOMPurify from 'dompurify';
+import { logger } from '~/utils/logger';
 
 const props = defineProps<{
   content: string;
@@ -35,7 +36,7 @@ const renderedContent = computed(() => {
     
     return sanitized;
   } catch (error) {
-    console.error('Markdown rendering error:', error);
+    logger.error('Markdown rendering error:', error);
     return props.content; // Fallback to plain text
   }
 });

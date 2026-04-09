@@ -1,5 +1,5 @@
 <template>
-  <div class="tech-tile">
+  <div class="tech-tile tech-glitch">
     <div class="tech-tile-header">{{ $t('components.catastropheCard.catastrophe') }}</div>
     <div v-if="catastrophe">
       <h3 class="font-bold text-accent uppercase">{{ catastrophe.title }}</h3>

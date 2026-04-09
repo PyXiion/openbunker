@@ -1,7 +1,7 @@
 <template>
   <div class="auth-button">
     <!-- User is authenticated -->
-    <div v-if="auth.isAuthenticated()" class="flex items-center space-x-4">
+    <div v-if="auth.isAuthenticated" class="flex items-center space-x-4">
       <div class="flex items-center space-x-2">
         <img 
           v-if="user?.avatarUrl" 
@@ -22,6 +22,12 @@
         </span>
       </div>
       <button 
+        @click="navigateTo('/profile')"
+        class="text-sm text-blue-500 hover:text-blue-700"
+      >
+        {{ $t('profile.profile') }}
+      </button>
+      <button 
         @click="handleLogout"
         class="text-sm text-gray-500 hover:text-gray-700"
       >
@@ -30,7 +36,7 @@
     </div>
 
     <!-- Guest user -->
-    <div v-else-if="auth.isGuest()" class="flex items-center space-x-4">
+    <div v-else-if="auth.isGuest" class="flex items-center space-x-4">
       <div class="flex items-center space-x-2">
         <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
           <span class="text-white text-sm font-semibold">G</span>
@@ -103,19 +109,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useAuth } from '~/composables/useAuth';
+import { logger } from '~/utils/logger';
 
 const auth = useAuth();
 const showGuestModal = ref(false);
 const guestUsername = ref('');
 
-const user = computed(() => auth.getCurrentUser());
-const guestUser = computed(() => auth.getGuestUser());
+const user = computed(() => auth.currentUser.value);
+const guestUser = computed(() => auth.guestUser.value);
 
 const handleLogin = async () => {
   try {
     await auth.login();
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
   }
 };
 
@@ -125,15 +132,15 @@ const handleGuestLogin = async () => {
     showGuestModal.value = false;
     guestUsername.value = '';
   } catch (error) {
-    console.error('Guest login error:', error);
+    logger.error('Guest login error:', error);
   }
 };
 
 const handleUpgrade = async () => {
   try {
-    await auth.login();
+    await auth.upgradeGuestAccount();
   } catch (error) {
-    console.error('Upgrade error:', error);
+    logger.error('Upgrade error:', error);
   }
 };
 
@@ -141,7 +148,7 @@ const handleLogout = async () => {
   try {
     await auth.logout();
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', error);
   }
 };
 </script>
