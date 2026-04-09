@@ -1,5 +1,7 @@
 # Bunker 🎭
 
+> ⚠️ **Warning**: This project was vibe coded. Proceed with caution.
+
 A multiplayer social deduction game where players debate their usefulness to survive in a bunker during a catastrophe.
 
 **The premise:** The world is ending. Only a few can survive in the bunker. Each player has hidden trait cards - some useful, some useless. Through discussion and voting, you decide who stays and who gets exiled.
