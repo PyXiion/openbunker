@@ -264,7 +264,8 @@ export function blurSlurs(text: string): string {
     }
     
     if (isSlur) {
-      return '*'.repeat(word.length);
+      // we use markdown
+      return '\\*'.repeat(word.length);
     }
     
     return word;
