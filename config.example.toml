@@ -1,0 +1,46 @@
+# Bunker Game Configuration
+# Copy this file to config.toml and customize as needed
+
+[server]
+# WebSocket Compression
+compression_threshold = 1024
+compression_level = 3
+compression_mem_level = 7
+
+# Rate Limiting
+rate_limit_window_ms = 900000  # 15 minutes
+rate_limit_max = 100
+
+# Server Timeouts
+health_check_timeout_ms = 3000
+server_timeout_ms = 30000
+keep_alive_timeout_ms = 65000
+headers_timeout_ms = 66000
+graceful_shutdown_timeout_ms = 10000
+
+[database]
+# Timeouts
+idle_timeout_ms = 30000
+connection_timeout_ms = 2000
+
+# Guest Profile Cleanup
+guest_profile_cleanup_days = 30
+
+[content_filter]
+cache_max = 1000
+cache_ttl_ms = 3600000  # 1 hour
+
+[game]
+min_players = 2
+max_players = 12
+bunker_capacity_ratio = 0.4
+
+# These vars aren't really used
+food_per_person = 30
+water_per_person = 30
+medicine_per_person = 10
+default_power = 100
+
+[social]
+telegram_url = "https://t.me/PyXiion_channel"
+discord_url = "https://discord.gg/KpAMMCdcrJ"
