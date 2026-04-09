@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen bg-base text-contrast p-4">
-    <div v-if="!gameStore.room" class="text-center">
+    <div v-if="!isAuthenticated" class="text-center">
+      <p>{{ $t('pages.room.loading') }}</p>
+    </div>
+    <div v-else-if="!gameStore.room" class="text-center">
       <p>{{ $t('pages.room.loading') }}</p>
     </div>
 
@@ -44,15 +47,19 @@
 const route = useRoute();
 const gameStore = useGameStore();
 const socket = useSocket();
+const auth = useAuth();
+
+// Check if authenticated, redirect to login if not
+const isAuthenticated = computed(() => auth.currentUser.value || auth.guestUser.value);
 
 // Load persisted state and handle rejoin
 onMounted(async () => {
   // Note: loadPersistedState() is already called in app.vue on startup
   // Don't call it again here to avoid resetting playerId
   
-  // Connect socket if not already connected
+  // Connect socket if not already connected (auth is already initialized in plugin)
   if (!gameStore.connected) {
-    socket.connect();
+    await socket.connect();
   }
   
   // Wait for connection to be established
@@ -80,18 +87,25 @@ onMounted(async () => {
   
   await waitForConnection();
   
-  // Check if we need to rejoin a room
+  // Check if authenticated after connection
+  const playerName = auth.currentUser.value?.username || auth.guestUser.value?.username;
+  if (!playerName) {
+    // Redirect to login with redirect URL as query parameter
+    navigateTo('/login?redirect=' + encodeURIComponent(route.path));
+    return;
+  }
+  
+  // Check if we need to rejoin a room or join via URL
   const currentRoomId = route.params.roomId as string;
   
   if (gameStore.room?.roomId === currentRoomId) {
     // We have the room state but need to rejoin the socket room
-    if (gameStore.playerName) {
-      const persistentId = gameStore.getOrCreatePersistentId();
-      socket.joinRoom(currentRoomId, gameStore.playerName);
-    }
+    const persistentId = gameStore.getOrCreatePersistentId();
+    socket.joinRoom(currentRoomId, playerName);
   } else if (!gameStore.room || gameStore.room.roomId !== currentRoomId) {
-    // No room state or different room, redirect to home
-    navigateTo('/');
+    // No room state or different room, attempt to join via URL
+    gameStore.setPlayerName(playerName);
+    socket.joinRoom(currentRoomId, playerName);
   }
 });
 

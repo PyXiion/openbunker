@@ -5,6 +5,7 @@
   },
   "pages": {
     "index": {
+      "welcome": "WELCOME",
       "joinGame": "JOIN GAME",
       "nickname": "NICKNAME",
       "nicknamePlaceholder": "ENTER_NICKNAME",
@@ -18,16 +19,18 @@
       "connected": "CONNECTED",
       "disconnected": "DISCONNECTED",
       "instructions": "HOW TO PLAY",
-      "instructionSteps": [
-        "Create a room or join with a code",
-        "Each player gets 6 hidden trait cards",
-        "Take turns revealing cards about yourself",
-        "Profession must be revealed first",
-        "Persuade others why you deserve to survive",
-        "Vote to exile players when bunker is full",
-        "Survivors must match bunker capacity"
-      ],
-      "gameDescription": "A social deduction survival game. After a global catastrophe, only a few can fit in the bunker. Reveal your skills, negotiate, and vote on who deserves to survive."
+      "instructionSteps": "1. Create a room or join with a code\n2. Each player gets 6 hidden trait cards\n3. Take turns revealing cards about yourself\n4. Profession must be revealed first\n5. Persuade others why you deserve to survive\n6. Vote to exile players when bunker is full\n7. Survivors must match bunker capacity",
+      "gameDescription": "A social deduction survival game. After a global catastrophe, only a few can fit in the bunker. Reveal your skills, negotiate, and vote on who deserves to survive.",
+      "guest": "GUEST",
+      "authenticated": "AUTHENTICATED",
+      "logout": "LOGOUT",
+      "guestNotice": "GUEST ACCOUNT",
+      "guestUpgradePrompt": "Upgrade to a permanent account to save your progress",
+      "continueAsGuest": "CONTINUE AS GUEST",
+      "continue": "CONTINUE",
+      "or": "OR",
+      "signIn": "SIGN IN",
+      "signUp": "SIGN UP"
     },
     "room": {
       "loading": "LOADING ROOM...",
@@ -108,6 +111,7 @@
     },
     "gameVoting": {
       "votingPhase": "VOTING PHASE",
+      "vote": "VOTE",
       "voteToExile": "VOTE TO EXILE",
       "voteStatus": "VOTE STATUS",
       "voted": "VOTED",
@@ -175,5 +179,26 @@
   "common": {
     "enabled": "Enabled",
     "disabled": "Disabled"
+  },
+  "profile": {
+    "title": "PROFILE",
+    "username": "USERNAME",
+    "email": "EMAIL",
+    "userId": "USER ID",
+    "accountType": "ACCOUNT TYPE",
+    "authenticated": "AUTHENTICATED",
+    "guest": "GUEST",
+    "verified": "VERIFIED",
+    "notVerified": "NOT VERIFIED",
+    "logout": "LOGOUT",
+    "backToHome": "BACK TO HOME",
+    "profile": "PROFILE",
+    "upgradeAccount": "UPGRADE ACCOUNT",
+    "save": "SAVE",
+    "edit": "EDIT",
+    "logoutError": "Logout failed",
+    "upgradeError": "Account upgrade failed",
+    "usernameError": "Username update failed",
+    "guestNotice": "**You are a guest**\n- Your data may be lost\n- You cannot set up an avatar\n\n- Upgrade to a permanent account to save your progress"
   }
 }

@@ -12,7 +12,7 @@ export type FirstTraitToReveal = 'profession' | 'biology' | 'hobby' | 'phobia' |
  */
 export interface GameSettings {
   bunkerCapacity?: number | null; // null = auto (based on player count)
-  firstTraitToReveal?: FirstTraitToReveal; // null = profession (default)
+  firstTraitToReveal?: FirstTraitToReveal; // null = any trait can be revealed first
   enableContentFilter?: boolean; // Enable/disable slur filtering (default: true)
 }
 
@@ -36,6 +36,6 @@ export interface UpdateRoomSettings extends GameSettings {
  * Default settings values
  */
 export const DEFAULT_SETTINGS: Required<Omit<GameSettings, 'bunkerCapacity'>> = {
-  firstTraitToReveal: null, // defaults to 'profession' in game logic
+  firstTraitToReveal: null, // null = any trait can be revealed first
   enableContentFilter: true,
 };

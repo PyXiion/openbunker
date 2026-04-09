@@ -4,11 +4,14 @@ import { useRuntimeConfig } from '#app/nuxt';
 import { useI18n, navigateTo } from '#imports';
 import { useAuth } from './useAuth';
 import type { CreateRoomSettings, UpdateRoomSettings } from '~/types/settings';
-import path from 'path';
+import { logger } from '~/utils/logger';
+import { applyDelta } from '~/utils/delta';
 
 // Global socket instance that persists across composable calls
 let globalSocket: Socket | null = null;
 let isJoiningRoom = false; // Prevent duplicate join requests
+let connectionRetries = 0; // Track connection retries
+const MAX_RETRIES = 10; // Maximum retry attempts
 
 /**
  * Composable for managing Socket.io connection and game events.
@@ -25,27 +28,44 @@ export const useSocket = () => {
    * If saved room exists in localStorage, attempts to rejoin on connect.
    * Reuses existing socket if already connected.
    */
-  const connect = () => {
+  const connect = async () => {
+    // Disconnect existing socket if any to prevent memory leaks
     if (globalSocket) {
-      console.log('Socket already exists, reconnecting...');
-      return;
+      logger.log('Socket already exists, disconnecting before reconnecting...');
+      globalSocket.disconnect();
+      globalSocket.removeAllListeners();
+      globalSocket = null;
     }
 
     const auth = useAuth();
-    console.log('Creating new socket connection...');
+    
+    // Wait for auth service to be available (client-side only)
+    if (!import.meta.client) {
+      logger.warn('Socket connection deferred - not available during SSR');
+      return;
+    }
+
+    logger.log('Creating new socket connection...');
+    logger.log('Auth state check:');
+    logger.log('- isAuthenticated.value:', auth.isAuthenticated.value);
+    logger.log('- isGuest.value:', auth.isGuest.value);
+    logger.log('- currentUser.value:', auth.currentUser.value);
+    logger.log('- guestUser.value:', auth.guestUser.value);
     
     // Prepare authentication data
     let authData: any = {};
     
-    if (auth.isAuthenticated()) {
+    if (auth.isAuthenticated.value) {
       // Authenticated user - use JWT token
       const token = auth.getAuthToken();
+      logger.log('Token found:', !!token);
       if (token) {
         authData.token = token;
       }
-    } else if (auth.isGuest()) {
+    } else if (auth.isGuest.value) {
       // Guest user - use guest credentials
       const guestUser = auth.getGuestUser();
+      logger.log('Guest user found:', !!guestUser);
       if (guestUser) {
         authData.guest = {
           userId: guestUser.userId,
@@ -56,9 +76,13 @@ export const useSocket = () => {
     }
 
     if (!authData.token && !authData.guest) {
-      console.warn('No authentication available for socket connection');
+      logger.log('No authentication available - socket will not connect');
       return;
     }
+
+    // Reset retry counter on successful auth data preparation
+    connectionRetries = 0;
+    logger.log('Socket authentication data prepared:', authData.token ? 'JWT token' : 'Guest credentials');
 
     globalSocket = io(config.public.wsUrl, {
       autoConnect: true,
@@ -69,7 +93,7 @@ export const useSocket = () => {
     });
 
     globalSocket.on('connect', () => {
-      console.log('Socket connected with ID:', globalSocket!.id);
+      logger.log('Socket connected with ID:', globalSocket!.id);
       gameStore.setConnected(true);
       // Don't set playerId here - it will come from server in ROOM_STATE_UPDATE
       
@@ -80,16 +104,16 @@ export const useSocket = () => {
       if (savedRoom && savedPlayerName && !isJoiningRoom) {
         try {
           const room = JSON.parse(savedRoom);
-          console.log('Attempting to rejoin room:', room.roomId, 'as', savedPlayerName);
+          logger.log('Attempting to rejoin room:', room.roomId, 'as', savedPlayerName);
           globalSocket!.emit('JOIN_ROOM', { roomId: room.roomId, playerName: savedPlayerName });
         } catch (error) {
-          console.error('Failed to parse saved room data:', error);
+          logger.error('Failed to parse saved room data:', error);
         }
       }
     });
 
     globalSocket.on('disconnect', () => {
-      console.log('Socket disconnected in composable');
+      logger.log('Socket disconnected in composable');
       gameStore.setConnected(false);
     });
 
@@ -109,8 +133,14 @@ export const useSocket = () => {
       isJoiningRoom = false; // Reset join flag on successful room update
     });
 
+    globalSocket.on('ROOM_STATE_DELTA', (delta) => {
+      // Apply delta to existing room state
+      gameStore.applyRoomDelta(delta);
+      isJoiningRoom = false; // Reset join flag on successful delta update
+    });
+
     globalSocket.on('ROOM_CREATED', (data) => {
-      console.log('Room created:', data.roomId);
+      logger.log('Room created:', data.roomId);
       // Save userId from server response
       if (data.userId) {
         gameStore.setPlayerId(data.userId);
@@ -124,6 +154,7 @@ export const useSocket = () => {
     });
 
     globalSocket.on('JOIN_ERROR', (data) => {
+      console.error('[Socket] JOIN_ERROR received', data);
       gameStore.setError(data.message);
       isJoiningRoom = false; // Reset join flag on error
       // Clear persisted room state and redirect to home
@@ -132,26 +163,37 @@ export const useSocket = () => {
     });
 
     globalSocket.on('ERROR', (data) => {
+      console.error('[Socket] ERROR received', data);
       gameStore.setError(data.message);
+      // Show toast notification for errors with more context
+      const toast = useToast();
+      const message = data.message || 'An error occurred';
+      // Add context for reveal errors
+      if (message.includes('reveal') || message.includes('Reveal')) {
+        toast.error(`${message}. You can only reveal cards during your turn.`, 6000);
+      } else {
+        toast.error(message, 5000);
+      }
     });
 
     globalSocket.on('PLAYER_EXILED', (data) => {
-      console.log('Player exiled:', data.playerId);
+      logger.log('Player exiled:', data.playerId);
     });
 
     globalSocket.on('PLAYER_LEFT', (data) => {
-      console.log('Player left room:', data.playerId, data.playerName);
+      logger.log('Player left room:', data.playerId, data.playerName);
     });
 
     globalSocket.on('KICKED', (data) => {
-      console.log('You were kicked from room:', data.roomId, data.reason);
+      console.error('[Socket] KICKED received', data);
+      logger.log('You were kicked from room:', data.roomId, data.reason);
       gameStore.setKickedMessage('errors.kicked');
       gameStore.clearRoomState();
       navigateTo('/');
     });
 
     globalSocket.on('ROOM_CODE_REGENERATED', (data) => {
-      console.log('Room code regenerated:', data.oldRoomId, '->', data.newRoomId);
+      logger.log('Room code regenerated:', data.oldRoomId, '->', data.newRoomId);
       // Update local storage with new room ID
       const savedRoom = localStorage.getItem('gameRoom');
       if (savedRoom) {
@@ -162,16 +204,16 @@ export const useSocket = () => {
             localStorage.setItem('gameRoom', JSON.stringify(room));
           }
         } catch (error) {
-          console.error('Failed to update saved room:', error);
+          logger.error('Failed to update saved room:', error);
         }
       }
     });
 
     globalSocket.on('CHAT_MESSAGE', (message) => {
-      console.log('[FRONTEND] Chat message received:', JSON.stringify(message));
-      console.log('[FRONTEND] Current chat history length:', gameStore.chatHistory.length);
+      logger.log('[FRONTEND] Chat message received:', JSON.stringify(message));
+      logger.log('[FRONTEND] Current chat history length:', gameStore.chatHistory.length);
       gameStore.addChatMessage(message);
-      console.log('[FRONTEND] After adding, chat history length:', gameStore.chatHistory.length);
+      logger.log('[FRONTEND] After adding, chat history length:', gameStore.chatHistory.length);
     });
   };
 
@@ -195,12 +237,12 @@ export const useSocket = () => {
    */
   const joinRoom = (roomId: string, playerName: string) => {
     if (!globalSocket || isJoiningRoom) {
-      console.log('Join room skipped - no socket or already joining');
+      logger.log('Join room skipped - no socket or already joining');
       return;
     }
     
     isJoiningRoom = true;
-    console.log('Joining room:', roomId, 'as', playerName);
+    logger.log('Joining room:', roomId, 'as', playerName);
     
     globalSocket.emit('JOIN_ROOM', { roomId, playerName });
     
@@ -211,12 +253,12 @@ export const useSocket = () => {
   };
 
   const startGame = (roomId: string) => {
-    console.log('socket.startGame called with roomId:', roomId);
-    console.log('socket exists:', !!globalSocket);
-    console.log('socket connected:', globalSocket?.connected);
+    logger.log('socket.startGame called with roomId:', roomId);
+    logger.log('socket exists:', !!globalSocket);
+    logger.log('socket connected:', globalSocket?.connected);
     
     if (!globalSocket) {
-      console.log('No socket available');
+      logger.log('No socket available');
       return;
     }
     globalSocket.emit('START_GAME', { roomId });

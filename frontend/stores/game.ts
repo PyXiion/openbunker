@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { GAME_CONSTANTS } from '~/constants/game';
 import type { GameSettings } from '~/types/settings';
+import { applyDelta } from '~/utils/delta';
 
 export interface ChatMessage {
   id: string;
@@ -19,6 +20,7 @@ export interface Player {
   name: string;
   isHost: boolean;
   isExiled: boolean;
+  avatarUrl?: string;
   traits: {
     profession: any;
     biology: any;
@@ -264,6 +266,27 @@ export const useGameStore = defineStore('game', {
     // Get persistent ID (must be set by server via ROOM_CREATED or ROOM_STATE_UPDATE)
     getOrCreatePersistentId(): string | null {
       return this.persistentId;
+    },
+
+    // Apply a differential update to the room state
+    applyRoomDelta(delta: Record<string, any>) {
+      if (!this.room) {
+        // If no room exists, we can't apply delta - this shouldn't happen in normal flow
+        console.error('Cannot apply delta: no room state exists');
+        return;
+      }
+      
+      // Apply delta to existing room state
+      this.room = applyDelta(this.room, delta);
+      
+      // Persist the updated room state
+      if (this.room) {
+        localStorage.setItem('gameRoom', JSON.stringify(this.room));
+        // Sync chat history from room
+        if (this.room.chatHistory) {
+          this.chatHistory = this.room.chatHistory;
+        }
+      }
     },
   }
 });
