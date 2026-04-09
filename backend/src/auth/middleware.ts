@@ -1,10 +1,41 @@
 import { Socket } from 'socket.io';
-import { getZitadelClient, ZitadelUser } from './zitadel';
+import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { getProfile, createProfile, updateProfile } from './database';
+import { logger } from '../utils/logger';
+
+// Validate required Casdoor configuration
+const requiredEnvVars = [
+  'CASDOOR_URL',
+  'CASDOOR_CLIENT_ID',
+  'CASDOOR_CLIENT_SECRET',
+  'CASDOOR_CERT',
+];
+
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  throw new Error(`Missing required Casdoor environment variables: ${missingEnvVars.join(', ')}`);
+}
+
+// Clean certificate format
+const certificate = process.env.CASDOOR_CERT || '';
+const cleanedCert = certificate
+  .split(/\\n|\n/)
+  .map(line => line.trim())
+  .join('\n');
+
+// Initialize Casdoor SDK
+const casdoor = new CasdoorSDK.SDK({
+  endpoint: process.env.CASDOOR_URL || process.env.CASDOOR_ENDPOINT || 'http://localhost:8000',
+  clientId: process.env.CASDOOR_CLIENT_ID || '',
+  clientSecret: process.env.CASDOOR_CLIENT_SECRET || '',
+  appName: process.env.CASDOOR_APP_NAME || 'bunker',
+  orgName: process.env.CASDOOR_ORG_NAME || 'bunker',
+  certificate: cleanedCert,
+});
 
 export interface AuthenticatedSocket extends Socket {
   userId: string;
-  user: ZitadelUser;
+  user: any;
   profile: any;
 }
 
@@ -22,40 +53,41 @@ export async function authenticateSocket(socket: Socket, next: (err?: Error) => 
       return next(new Error('No authentication token provided'));
     }
 
-    const zitadelClient = getZitadelClient();
-    const user = await zitadelClient.verifyToken(token);
+    const user = await casdoor.parseJwtToken(token);
+    
+    if (!user || !user.id) {
+      return next(new Error('Invalid token'));
+    }
     
     // Get or create user profile
-    let profile = await getProfile(user.userId);
+    let profile = await getProfile(user.id);
     
     if (!profile) {
       // Create new profile for authenticated user
       profile = await createProfile({
-        id: user.userId,
-        username: user.displayName || user.loginName || user.preferredLoginName || 'Unknown',
+        id: user.id,
+        username: user.name || user.displayName || 'Unknown',
         email: user.email,
-        avatar_url: user.avatarUrl,
+        avatar_url: user.avatar,
         is_guest: false,
-        is_verified: user.isEmailVerified,
         last_login: new Date(),
       });
     } else {
       // Update last login
-      profile = await updateProfile(user.userId, {
+      profile = await updateProfile(user.id, {
         last_login: new Date(),
-        is_verified: user.isEmailVerified,
-        avatar_url: user.avatarUrl || profile.avatar_url,
+        avatar_url: user.avatar || profile.avatar_url,
       });
     }
 
     // Extend socket with user information
-    (socket as AuthenticatedSocket).userId = user.userId;
+    (socket as AuthenticatedSocket).userId = user.id;
     (socket as AuthenticatedSocket).user = user;
     (socket as AuthenticatedSocket).profile = profile;
 
     next();
   } catch (error) {
-    console.error('Socket authentication failed:', error);
+    logger.error('Socket authentication failed:', error);
     next(new Error('Authentication failed'));
   }
 }
@@ -76,7 +108,6 @@ export async function authenticateGuest(socket: Socket, next: (err?: Error) => v
         id: guestInfo.userId,
         username: guestInfo.username,
         is_guest: true,
-        is_verified: false,
         last_login: new Date(),
       });
     } else {
@@ -89,16 +120,15 @@ export async function authenticateGuest(socket: Socket, next: (err?: Error) => v
     // Extend socket with guest information
     (socket as AuthenticatedSocket).userId = guestInfo.userId;
     (socket as AuthenticatedSocket).user = {
-      userId: guestInfo.userId,
-      loginName: guestInfo.username,
+      id: guestInfo.userId,
+      name: guestInfo.username,
       displayName: guestInfo.username,
-      isEmailVerified: false,
-    } as ZitadelUser;
+    };
     (socket as AuthenticatedSocket).profile = profile;
 
     next();
   } catch (error) {
-    console.error('Guest authentication failed:', error);
+    logger.error('Guest authentication failed:', error);
     next(new Error('Guest authentication failed'));
   }
 }
@@ -132,10 +162,6 @@ export function isGuest(socket: Socket): boolean {
   return authSocket.profile?.is_guest || false;
 }
 
-export function isVerified(socket: Socket): boolean {
-  const authSocket = socket as AuthenticatedSocket;
-  return authSocket.profile?.is_verified || false;
-}
 
 export function canAccessRoom(socket: Socket, roomId: string): boolean {
   // For now, allow all authenticated users to access any room

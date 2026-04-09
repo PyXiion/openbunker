@@ -8,7 +8,6 @@ export interface Profile {
   email?: string;
   avatar_url?: string;
   is_guest: boolean;
-  is_verified: boolean;
   created_at: Date;
   updated_at: Date;
   last_login?: Date;
@@ -24,8 +23,18 @@ export interface UserStats {
 
 export function initializeDatabase(): Pool {
   if (!pool) {
+    const host = process.env.DATABASE_HOST || 'localhost';
+    const port = parseInt(process.env.DATABASE_PORT || '5432', 10);
+    const database = process.env.DATABASE_NAME || 'bunker';
+    const user = process.env.DATABASE_USER || 'postgres';
+    const password = process.env.DATABASE_PASSWORD || 'postgres';
+    
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/bunker',
+      host,
+      port,
+      database,
+      user,
+      password,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
@@ -46,22 +55,32 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 export async function createProfile(profile: Omit<Profile, 'created_at' | 'updated_at'>): Promise<Profile> {
   const db = initializeDatabase();
   const result = await db.query(
-    `INSERT INTO profiles (id, username, email, avatar_url, is_guest, is_verified, last_login)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING *`,
-    [profile.id, profile.username, profile.email, profile.avatar_url, profile.is_guest, profile.is_verified, profile.last_login]
+    `INSERT INTO profiles (id, username, email, avatar_url, is_guest, last_login)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (id) DO UPDATE SET
+      username = EXCLUDED.username,
+      email = EXCLUDED.email,
+      avatar_url = EXCLUDED.avatar_url,
+      is_guest = EXCLUDED.is_guest,
+      last_login = EXCLUDED.last_login
+    RETURNING *`,
+    [profile.id, profile.username, profile.email, profile.avatar_url, profile.is_guest, profile.last_login]
   );
   return result.rows[0];
 }
 
 export async function updateProfile(userId: string, updates: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>): Promise<Profile | null> {
   const db = initializeDatabase();
+  
+  // Whitelist of allowed column names to prevent SQL injection
+  const allowedColumns = ['username', 'email', 'avatar_url', 'is_guest', 'last_login'];
+  
   const fields = [];
   const values = [];
   let paramIndex = 1;
 
   for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined) {
+    if (value !== undefined && allowedColumns.includes(key)) {
       fields.push(`${key} = $${paramIndex}`);
       values.push(value);
       paramIndex++;

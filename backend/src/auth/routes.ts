@@ -1,8 +1,47 @@
 import express from 'express';
-import { getZitadelClient, getServiceAccount } from './zitadel';
+import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { createProfile, updateProfile, getProfile } from './database';
+import { logger } from '../utils/logger';
 
 const router = express.Router();
+
+// Initialize Casdoor SDK lazily to ensure environment variables are loaded
+let casdoorInstance: any = null;
+
+function getCasdoor() {
+  if (!casdoorInstance) {
+    const certificate = process.env.CASDOOR_CERT || '';
+
+    const cleanedCert = certificate
+      .split(/\\n|\n/)
+      .map(line => line.trim())
+      .join('\n');
+
+    const requiredEnvVars = [
+      'CASDOOR_URL',
+      'CASDOOR_CLIENT_ID',
+      'CASDOOR_CLIENT_SECRET',
+      'CASDOOR_CERT',
+    ];
+
+    const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    if (missingEnvVars.length > 0) {
+      throw new Error(`Missing required Casdoor environment variables: ${missingEnvVars.join(', ')}`);
+    }
+
+    const casdoorConfig = {
+      endpoint: process.env.CASDOOR_URL || process.env.CASDOOR_ENDPOINT || 'http://localhost:8000',
+      clientId: process.env.CASDOOR_CLIENT_ID || '',
+      clientSecret: process.env.CASDOOR_CLIENT_SECRET || '',
+      appName: process.env.CASDOOR_APP_NAME || 'bunker',
+      orgName: process.env.CASDOOR_ORG_NAME || 'bunker',
+      certificate: cleanedCert,
+    };
+
+    casdoorInstance = new CasdoorSDK.SDK(casdoorConfig);
+  }
+  return casdoorInstance;
+}
 
 // Guest authentication endpoint
 router.post('/guest', async (req, res) => {
@@ -22,47 +61,8 @@ router.post('/guest', async (req, res) => {
       isGuest: true,
     });
   } catch (error) {
-    console.error('Guest auth error:', error);
+    logger.error('Guest auth error:', error);
     res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Create shadow user via Zitadel service account
-router.post('/shadow-user', async (req, res) => {
-  try {
-    const { username } = req.body;
-    
-    if (!username || username.trim().length === 0) {
-      return res.status(400).json({ error: 'Username is required' });
-    }
-
-    const zitadelClient = getZitadelClient();
-    const serviceAccount = getServiceAccount();
-    
-    // Create shadow user in Zitadel
-    const shadowUserId = await zitadelClient.createShadowUser(username.trim(), serviceAccount);
-    
-    // Exchange service account token for user token
-    const userToken = await zitadelClient.exchangeServiceAccountToken(serviceAccount, shadowUserId);
-    
-    // Create profile in our database
-    await createProfile({
-      id: shadowUserId,
-      username: username.trim(),
-      is_guest: true,
-      is_verified: false,
-      last_login: new Date(),
-    });
-
-    res.json({
-      userId: shadowUserId,
-      username: username.trim(),
-      token: userToken,
-      isGuest: true,
-    });
-  } catch (error) {
-    console.error('Shadow user creation error:', error);
-    res.status(500).json({ error: 'Failed to create shadow user' });
   }
 });
 
@@ -75,45 +75,111 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const zitadelClient = getZitadelClient();
-    const user = await zitadelClient.verifyToken(token);
+    const casdoor = getCasdoor();
+    const user = await casdoor.parseJwtToken(token);
     
-    let profile = await getProfile(user.userId);
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    let profile = await getProfile(user.id);
     
     if (!profile) {
       // Create profile if it doesn't exist
       profile = await createProfile({
-        id: user.userId,
-        username: user.displayName || user.loginName || 'Unknown',
+        id: user.id,
+        username: user.name || user.displayName || 'Unknown',
         email: user.email,
-        avatar_url: user.avatarUrl,
+        avatar_url: user.avatar,
         is_guest: false,
-        is_verified: user.isEmailVerified,
         last_login: new Date(),
       });
     } else {
       // Update last login and verification status
-      profile = await updateProfile(user.userId, {
+      profile = await updateProfile(user.id, {
         last_login: new Date(),
-        is_verified: user.isEmailVerified,
-        avatar_url: user.avatarUrl || profile.avatar_url,
+        avatar_url: user.avatar || profile.avatar_url,
       });
     }
 
     res.json({
       profile,
       user: {
-        userId: user.userId,
-        loginName: user.loginName,
-        displayName: user.displayName,
+        userId: user.id,
+        username: user.name,
         email: user.email,
-        isEmailVerified: user.isEmailVerified,
-        avatarUrl: user.avatarUrl,
+        avatarUrl: user.avatar,
       },
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// OAuth callback endpoint - exchange code for token and sync with database
+router.post('/callback', async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code is required' });
+    }
+
+    const casdoor = getCasdoor();
+    const tokenResponse = await casdoor.getAuthToken(code);
+    
+    const token = tokenResponse.access_token;
+    
+    if (!token) {
+      console.error('Token is empty after extraction');
+      return res.status(400).json({ error: 'Failed to get access token' });
+    }
+
+    // Parse JWT token to get user info
+    const claims = casdoor.parseJwtToken(token) as any;
+    
+    // Casdoor JWT contains user info directly in claims, not nested User property
+    const user = claims;
+    
+    if (!user || !user.id) {
+      console.error('Failed to parse JWT token or missing user info');
+      return res.status(400).json({ error: 'Failed to parse JWT token' });
+    }
+
+    // Get or create user profile
+    let profile = await getProfile(user.id);
+    
+    if (!profile) {
+      profile = await createProfile({
+        id: user.id,
+        username: user.name || user.displayName || 'Unknown',
+        email: user.email,
+        avatar_url: user.avatar,
+        is_guest: false,
+        last_login: new Date(),
+      });
+    } else {
+      profile = await updateProfile(user.id, {
+        last_login: new Date(),
+        avatar_url: user.avatar || profile.avatar_url,
+      });
+    }
+
+    if (!profile) {
+      return res.status(500).json({ error: 'Failed to create or update profile' });
+    }
+
+    res.json({
+      userId: user.id,
+      username: profile.username,
+      email: profile.email,
+      avatarUrl: profile.avatar_url,
+      token: token,
+    });
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    res.status(500).json({ error: 'Failed to exchange authorization code' });
   }
 });
 
@@ -126,21 +192,18 @@ router.post('/upgrade', async (req, res) => {
       return res.status(400).json({ error: 'shadowUserId and realToken are required' });
     }
 
-    const zitadelClient = getZitadelClient();
-    const serviceAccount = getServiceAccount();
+    const casdoor = getCasdoor();
+    const realUser = await casdoor.parseJwtToken(realToken);
     
-    // Verify the real user token
-    const realUser = await zitadelClient.verifyToken(realToken);
+    if (!realUser || !realUser.id) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
     
-    // Link shadow user to real account
-    await zitadelClient.linkShadowUserToRealAccount(shadowUserId, realUser.userId, serviceAccount);
-    
-    // Update profile to mark as verified and not a guest
+    // Update profile to mark as not a guest
     const profile = await updateProfile(shadowUserId, {
       is_guest: false,
-      is_verified: realUser.isEmailVerified,
       email: realUser.email,
-      avatar_url: realUser.avatarUrl,
+      avatar_url: realUser.avatar,
     });
 
     res.json({
@@ -150,6 +213,45 @@ router.post('/upgrade', async (req, res) => {
   } catch (error) {
     console.error('Account upgrade error:', error);
     res.status(500).json({ error: 'Failed to upgrade account' });
+  }
+});
+
+// Update username endpoint
+router.put('/username', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const { username } = req.body;
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+    
+    if (!username || username.trim().length === 0) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const casdoor = getCasdoor();
+    const user = await casdoor.parseJwtToken(token);
+    
+    if (!user || !user.id) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+    
+    // Update profile in database
+    const profile = await updateProfile(user.id, {
+      username: username.trim(),
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    res.json({
+      username: profile.username,
+    });
+  } catch (error) {
+    console.error('Username update error:', error);
+    res.status(500).json({ error: 'Failed to update username' });
   }
 });
 
