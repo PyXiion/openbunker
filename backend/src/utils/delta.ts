@@ -29,18 +29,18 @@ export function computeDelta(oldState: any, newState: any): Record<string, any> 
     if (oldValue === undefined && newValue !== undefined) {
       // New field added
       changes[key] = newValue;
-    } else if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-      // Field changed
-      if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {
-        // Recursively compute delta for nested objects
-        const nestedDelta = computeDelta(oldValue, newValue);
-        if (Object.keys(nestedDelta).length > 0) {
-          changes[key] = nestedDelta;
-        }
-      } else {
-        // Primitive value or array changed
-        changes[key] = newValue;
+    } else if (oldValue === newValue) {
+      // Unchanged (primitive comparison)
+      continue;
+    } else if (typeof newValue === 'object' && newValue !== null && !Array.isArray(newValue)) {
+      // Nested object - recursively compute delta
+      const nestedDelta = computeDelta(oldValue, newValue);
+      if (Object.keys(nestedDelta).length > 0) {
+        changes[key] = nestedDelta;
       }
+    } else if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+      // Field changed (arrays or complex objects)
+      changes[key] = newValue;
     }
   }
 

@@ -3,6 +3,14 @@
  * Provides slur detection and blurring functionality
  */
 
+import { LRUCache } from 'lru-cache';
+
+// LRU cache for filtered messages to reduce CPU overhead
+const filterCache = new LRUCache<string, string>({
+  max: 1000, // Cache up to 1000 unique messages
+  ttl: 1000 * 60 * 60, // 1 hour TTL
+});
+
 // Comprehensive profanity filter - English
 const ENGLISH_SLURS = [
   // Strong profanity
@@ -283,7 +291,21 @@ export function hasInappropriateContent(text: string): boolean {
 
 /**
  * Filters a chat message by blurring any inappropriate content
+ * Uses LRU cache to avoid re-filtering identical messages
  */
 export function filterChatMessage(message: string): string {
-  return blurSlurs(message);
+  const cacheKey = message.toLowerCase().trim();
+  
+  // Check cache first
+  if (filterCache.has(cacheKey)) {
+    return filterCache.get(cacheKey)!;
+  }
+  
+  // Filter the message
+  const filtered = blurSlurs(message);
+  
+  // Cache the result
+  filterCache.set(cacheKey, filtered);
+  
+  return filtered;
 }
