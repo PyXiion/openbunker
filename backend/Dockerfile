@@ -15,6 +15,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Copy game data files (JSON files are not copied by tsc)
+RUN cp -r src/game/data dist/game/data
+
 # Production stage
 FROM node:18-alpine AS production
 
