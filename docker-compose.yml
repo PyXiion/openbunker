@@ -1,46 +1,39 @@
 services:
-  zitadel:
-    image: ghcr.io/zitadel/zitadel:latest
-    command: 'start-from-init --masterkey "MasterkeyNeedsToBeChanged" --tlsMode disabled'
+  casdoor:
+    image: casbin/casdoor:latest
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${CASDOOR_PORT:-8000}:8000"
     environment:
-      - ZITADEL_DATABASE_POSTGRES_HOST=postgres
-      - ZITADEL_DATABASE_POSTGRES_PORT=5432
-      - ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel
-      - ZITADEL_DATABASE_POSTGRES_USER=zitadel
-      - ZITADEL_DATABASE_POSTGRES_PASSWORD=zitadel
-      - ZITADEL_DATABASE_POSTGRES_ADMIN_USER=postgres
-      - ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=postgres
-      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_USERNAME= zitadel
-      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PASSWORD= zitadel
-      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_HUMAN_USERNAME= admin@bunker.local
-      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_HUMAN_PASSWORD= AdminPassword123!
-      - ZITADEL_FIRSTINSTANCE_ORG_NAME= Bunker Game
+      - RUNNING_IN_DOCKER=true
+      - CASDOOR_PUBLIC_PORT=${CASDOOR_PORT:-8000}
+      - CASDOOR_PUBLIC_DOMAIN=localhost:${CASDOOR_PORT:-8000}
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - bunker-network
+    volumes:
+      - ./casdoor/conf:/conf
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT:-5432}:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=zitadel
+      - POSTGRES_USER=${DATABASE_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - POSTGRES_DB=${DATABASE_NAME:-bunker}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d
+      - ./database/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./database/migrations:/migrations
     networks:
       - bunker-network
 
@@ -49,19 +42,22 @@ services:
       context: ./backend
       target: production
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-3001}:3001"
     environment:
-      - NODE_ENV=production
-      - FRONTEND_URL=http://localhost:3000
-      - WS_PATH=/socket.io/
-      # Use h2c for HTTP/2 cleartext (development) or https for production
-      - ZITADEL_URL=http://zitadel:8080
-      - ZITADEL_CLIENT_ID=bunker-frontend
-      - ZITADEL_CLIENT_SECRET=your-client-secret-here
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/bunker
+      - NODE_ENV=${NODE_ENV:-production}
+      - FRONTEND_URL=${FRONTEND_DOMAIN:-http://localhost:3000}
+      - WS_PATH=${WS_PATH:-/socket.io/}
+      - CASDOOR_URL=${CASDOOR_URL:-http://casdoor:8000}
+      - CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
+      - CASDOOR_CLIENT_SECRET=${CASDOOR_CLIENT_SECRET:-your-client-secret-here}
+      - CASDOOR_APP_NAME=${CASDOOR_APP_NAME:-bunker}
+      - CASDOOR_ORG_NAME=${CASDOOR_ORG_NAME:-bunker}
+      - CASDOOR_ENDPOINT=${CASDOOR_ENDPOINT:-http://casdoor:8000}
+      - CASDOOR_JWT_SECRET=${CASDOOR_JWT_SECRET:-your-jwt-secret}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bunker}
     depends_on:
       - postgres
-      - zitadel
+      - casdoor
     networks:
       - bunker-network
     restart: unless-stopped
@@ -71,21 +67,24 @@ services:
       context: ./frontend
       target: production
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - WS_PATH=/socket.io/
-      - ZITADEL_URL=http://localhost:8080
-      - ZITADEL_CLIENT_ID=bunker-frontend
-      - BACKEND_URL=http://localhost:3001
+      - WS_PATH=${WS_PATH:-/socket.io/}
+      - CASDOOR_URL=${CASDOOR_URL:-http://localhost:8000}
+      - CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
+      - CASDOOR_APP_NAME=${CASDOOR_APP_NAME:-bunker}
+      - CASDOOR_ORG_NAME=${CASDOOR_ORG_NAME:-bunker}
+      - BACKEND_URL=${BACKEND_DOMAIN:-http://localhost:3001}
     depends_on:
       - backend
-      - zitadel
+      - casdoor
     networks:
       - bunker-network
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  casdoor-conf:
 
 networks:
   bunker-network:
