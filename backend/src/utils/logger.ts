@@ -40,5 +40,4 @@ export const logger = winston.createLogger({
   level: isDebug ? 'debug' : 'error',
   format: logFormat,
   transports,
-  silent: !isDebug && process.env.NODE_ENV === 'production'
 });
