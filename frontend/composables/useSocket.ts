@@ -12,6 +12,13 @@ let globalSocket: Socket | null = null;
 let isJoiningRoom = false; // Prevent duplicate join requests
 let connectionRetries = 0; // Track connection retries
 const MAX_RETRIES = 10; // Maximum retry attempts
+const INITIAL_RETRY_DELAY = 1000; // Initial retry delay in ms
+const MAX_RETRY_DELAY = 30000; // Maximum retry delay in ms
+
+// Calculate exponential backoff delay
+function getRetryDelay(retryCount: number): number {
+  return Math.min(INITIAL_RETRY_DELAY * Math.pow(2, retryCount), MAX_RETRY_DELAY);
+}
 
 /**
  * Composable for managing Socket.io connection and game events.
@@ -95,12 +102,13 @@ export const useSocket = () => {
     globalSocket.on('connect', () => {
       logger.log('Socket connected with ID:', globalSocket!.id);
       gameStore.setConnected(true);
+      connectionRetries = 0; // Reset retry counter on successful connection
       // Don't set playerId here - it will come from server in ROOM_STATE_UPDATE
-      
+
       // If we have persisted room data, attempt to rejoin
       const savedRoom = localStorage.getItem('gameRoom');
       const savedPlayerName = localStorage.getItem('playerName');
-      
+
       if (savedRoom && savedPlayerName && !isJoiningRoom) {
         try {
           const room = JSON.parse(savedRoom);
@@ -115,6 +123,20 @@ export const useSocket = () => {
     globalSocket.on('disconnect', () => {
       logger.log('Socket disconnected in composable');
       gameStore.setConnected(false);
+
+      // Attempt to reconnect with exponential backoff
+      if (connectionRetries < MAX_RETRIES) {
+        const delay = getRetryDelay(connectionRetries);
+        logger.log(`Attempting to reconnect in ${delay}ms (attempt ${connectionRetries + 1}/${MAX_RETRIES})`);
+        setTimeout(() => {
+          connectionRetries++;
+          if (globalSocket && !globalSocket.connected) {
+            globalSocket.connect();
+          }
+        }, delay);
+      } else {
+        logger.error('Max reconnection attempts reached. Please refresh the page.');
+      }
     });
 
     globalSocket.on('ROOM_STATE_UPDATE', (room) => {
@@ -155,10 +177,11 @@ export const useSocket = () => {
 
     globalSocket.on('JOIN_ERROR', (data) => {
       console.error('[Socket] JOIN_ERROR received', data);
-      gameStore.setError(data.message);
       isJoiningRoom = false; // Reset join flag on error
       // Clear persisted room state and redirect to home
       gameStore.clearRoomState();
+      // Set error after clearing to ensure it persists
+      gameStore.setError(data.message);
       navigateTo('/');
     });
 
