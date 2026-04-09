@@ -148,7 +148,7 @@ export class AuthService {
       try {
         // Get the code and state from URL
         // Exchange authorization code for token via backend
-        const response = await fetch(`${this.config.public.backendUrl}/auth/callback`, {
+        const response = await fetch(`${this.config.public.backendUrl}/api/auth/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -196,7 +196,7 @@ export class AuthService {
 
   async createGuestUser(username: string): Promise<GuestUser> {
     try {
-      const response = await fetch(`${this.config.public.backendUrl}/auth/guest`, {
+      const response = await fetch(`${this.config.public.backendUrl}/api/auth/guest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
@@ -299,7 +299,7 @@ export class AuthService {
     }
 
     try {
-      const response = await fetch(`${this.config.public.backendUrl}/auth/upgrade`, {
+      const response = await fetch(`${this.config.public.backendUrl}/api/auth/upgrade`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shadowUserId, realToken }),

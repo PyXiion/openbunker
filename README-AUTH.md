@@ -116,10 +116,12 @@ When using Traefik or similar:
 ## API Endpoints
 
 ### Authentication
-- `POST /auth/guest` - Create guest user
-- `POST /auth/shadow-user` - Create shadow user with token
-- `GET /auth/profile` - Get user profile
-- `POST /auth/upgrade` - Upgrade guest to real account
+- `POST /api/auth/guest` - Create guest user
+- `POST /api/auth/shadow-user` - Create shadow user with token
+- `GET /api/auth/profile` - Get user profile
+- `POST /api/auth/upgrade` - Upgrade guest to real account
+- `POST /api/auth/callback` - OAuth callback endpoint
+- `PUT /api/auth/username` - Update username
 
 ### Socket.io Events
 - All connections now require authentication

@@ -47,6 +47,7 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - FRONTEND_URL=${FRONTEND_DOMAIN:-http://localhost:3000}
       - WS_PATH=${WS_PATH:-/socket.io/}
+      - API_PREFIX=${API_PREFIX:-/api}
       - CASDOOR_URL=${CASDOOR_URL:-http://casdoor:8000}
       - CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
       - CASDOOR_CLIENT_SECRET=${CASDOOR_CLIENT_SECRET:-your-client-secret-here}

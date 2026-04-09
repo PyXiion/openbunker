@@ -64,7 +64,7 @@ Access:
      backend:
        labels:
          - "traefik.enable=true"
-         - "traefik.http.routers.backend.rule=Host(`your-domain.com`) && PathPrefix(`/socket.io/`)"
+         - "traefik.http.routers.backend.rule=Host(`your-domain.com`) && (PathPrefix(`/socket.io/`) || PathPrefix(`/api/`))"
          - "traefik.http.services.backend.loadbalancer.server.port=3001"
 
      zitadel:
@@ -120,5 +120,5 @@ To enable guest account promotion:
 2. Create service key (JSON format)
 3. Grant PROJECT_OWNER role
 4. Update `.env` with service account credentials
-5. Change frontend to use `/auth/shadow-user` endpoint
+5. Change frontend to use `/api/auth/shadow-user` endpoint
 6. Restart services

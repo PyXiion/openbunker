@@ -235,7 +235,7 @@ const saveUsername = async () => {
       const config = useRuntimeConfig();
       const token = auth.getAuthToken();
       
-      const response = await fetch(`${config.public.backendUrl}/auth/username`, {
+      const response = await fetch(`${config.public.backendUrl}/api/auth/username`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
