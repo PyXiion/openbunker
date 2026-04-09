@@ -19,10 +19,10 @@ RUN npm run build
 FROM node:20-alpine AS production
 WORKDIR /app
 
-COPY --from=builder /app/.output ./.output
-
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
-RUN chown -R nodejs:nodejs /app
+
+COPY --from=builder --chown=nodejs:nodejs /app/.output ./.output
+
 USER nodejs
 
 # Expose port
