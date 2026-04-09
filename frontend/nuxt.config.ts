@@ -58,13 +58,13 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      wsUrl: process.env.WS_URL || 'http://localhost:3001',
-      wsPath: process.env.WS_PATH || '/socket.io/',
-      backendUrl: process.env.BACKEND_URL || 'http://localhost:3001',
-      casdoorUrl: process.env.CASDOOR_URL || 'http://localhost:8000',
-      casdoorClientId: process.env.CASDOOR_CLIENT_ID || 'bunker-frontend',
-      casdoorAppName: process.env.CASDOOR_APP_NAME || 'bunker',
-      casdoorOrgName: process.env.CASDOOR_ORG_NAME || 'bunker',
+      wsUrl: process.env.NUXT_PUBLIC_WS_URL || 'http://localhost:3001',
+      wsPath: process.env.NUXT_PUBLIC_WS_PATH || '/socket.io/',
+      backendUrl: process.env.NUXT_PUBLIC_BACKEND_URL || 'http://localhost:3001',
+      casdoorUrl: process.env.NUXT_PUBLIC_CASDOOR_URL || 'http://localhost:8000',
+      casdoorClientId: process.env.NUXT_PUBLIC_CASDOOR_CLIENT_ID || 'bunker-frontend',
+      casdoorAppName: process.env.NUXT_PUBLIC_CASDOOR_APP_NAME || 'bunker',
+      casdoorOrgName: process.env.NUXT_PUBLIC_CASDOOR_ORG_NAME || 'bunker',
     }
   }
 })

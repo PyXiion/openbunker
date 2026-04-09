@@ -53,7 +53,7 @@ services:
       - CASDOOR_APP_NAME=${CASDOOR_APP_NAME:-bunker}
       - CASDOOR_ORG_NAME=${CASDOOR_ORG_NAME:-bunker}
       - CASDOOR_ENDPOINT=${CASDOOR_ENDPOINT:-http://casdoor:8000}
-      - CASDOOR_JWT_SECRET=${CASDOOR_JWT_SECRET:-your-jwt-secret}
+      - CASDOOR_CERT=${CASDOOR_CERT}
       - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bunker}
     depends_on:
       - postgres
@@ -69,12 +69,12 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - WS_PATH=${WS_PATH:-/socket.io/}
-      - CASDOOR_URL=${CASDOOR_URL:-http://localhost:8000}
-      - CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
-      - CASDOOR_APP_NAME=${CASDOOR_APP_NAME:-bunker}
-      - CASDOOR_ORG_NAME=${CASDOOR_ORG_NAME:-bunker}
-      - BACKEND_URL=${BACKEND_DOMAIN:-http://localhost:3001}
+      - NUXT_PUBLIC_WS_PATH=${WS_PATH:-/socket.io/}
+      - NUXT_PUBLIC_CASDOOR_URL=${CASDOOR_URL:-http://localhost:8000}
+      - NUXT_PUBLIC_CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
+      - NUXT_PUBLIC_CASDOOR_APP_NAME=${CASDOOR_APP_NAME:-bunker}
+      - NUXT_PUBLIC_CASDOOR_ORG_NAME=${CASDOOR_ORG_NAME:-bunker}
+      - NUXT_PUBLIC_BACKEND_URL=${BACKEND_DOMAIN:-http://localhost:3001}
     depends_on:
       - backend
       - casdoor
