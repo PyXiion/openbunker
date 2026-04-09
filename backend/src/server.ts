@@ -10,6 +10,7 @@ import { authenticateSocketWithFallback } from './auth/middleware';
 import { logger } from './utils/logger';
 
 const app = express();
+app.set('trust proxy', true);
 const server = createServer(app);
 const io = new Server(server, {
   path: process.env.WS_PATH,
@@ -44,6 +45,8 @@ const limiter = rateLimit({
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => false, // Don't skip, but handle X-Forwarded-For
+  validate: { xForwardedForHeader: false }, // Skip X-Forwarded-For validation
 });
 app.use('/auth', limiter);
 

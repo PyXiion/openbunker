@@ -69,6 +69,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
+      - NUXT_PUBLIC_WS_URL=${BACKEND_DOMAIN:-http://localhost:3001}
       - NUXT_PUBLIC_WS_PATH=${WS_PATH:-/socket.io/}
       - NUXT_PUBLIC_CASDOOR_URL=${CASDOOR_URL:-http://localhost:8000}
       - NUXT_PUBLIC_CASDOOR_CLIENT_ID=${CASDOOR_CLIENT_ID:-bunker-frontend}
