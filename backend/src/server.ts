@@ -45,8 +45,7 @@ const limiter = rateLimit({
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => false, // Don't skip, but handle X-Forwarded-For
-  validate: { xForwardedForHeader: false }, // Skip X-Forwarded-For validation
+  validate: { trustProxy: false }, // Skip trust proxy validation
 });
 app.use('/auth', limiter);
 
