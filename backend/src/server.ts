@@ -114,10 +114,11 @@ app.get('/health', async (req, res) => {
 });
 
 // Auth routes
-import authRoutes, { setSocketIO } from './auth/routes';
+import authRoutes from './auth/routes';
+import roomRoutes, { setSocketIO as setRoomSocketIO } from './auth/roomRoutes';
 import { verifyRoomJoin } from './auth/middleware';
 const apiPrefix = process.env.API_PREFIX || '/api';
-setSocketIO(io);
+setRoomSocketIO(io);
 app.use(`${apiPrefix}/auth`, authRoutes);
 
 // Socket.io handlers with authentication
