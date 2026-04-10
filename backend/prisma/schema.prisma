@@ -45,7 +45,8 @@ model UserStats {
 
 model GameHistory {
   id              String    @id @default(uuid()) @map("id") @db.Uuid
-  roomId          String    @map("room_id") @db.VarChar(10)
+  roomId          String    @map("room_id") @db.Uuid
+  roomCode        String    @map("room_code") @db.VarChar(10)
   profileId       String?   @map("profile_id") @db.VarChar(255)
   playerName      String    @map("player_name") @db.VarChar(100)
   gameStatus      String    @map("game_status") @db.VarChar(20)
@@ -63,5 +64,6 @@ model GameHistory {
   @@index([profileId])
   @@index([playedAt])
   @@index([roomId])
+  @@index([roomCode])
   @@map("game_history")
 }
