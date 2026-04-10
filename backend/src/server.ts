@@ -68,6 +68,9 @@ import { prisma } from './auth/database';
 // Create singleton GameLogic instance
 const gameLogic = new GameLogic();
 
+// Export gameLogic for use in routes and middleware
+export { gameLogic };
+
 // Basic health check endpoint
 app.get('/health', async (req, res) => {
   const health = {
@@ -111,18 +114,27 @@ app.get('/health', async (req, res) => {
 });
 
 // Auth routes
-import authRoutes from './auth/routes';
+import authRoutes, { setSocketIO } from './auth/routes';
+import { verifyRoomJoin } from './auth/middleware';
 const apiPrefix = process.env.API_PREFIX || '/api';
+setSocketIO(io);
 app.use(`${apiPrefix}/auth`, authRoutes);
 
 // Socket.io handlers with authentication
 const socketHandlers = new SocketHandlers(io, gameLogic);
 
-// Apply authentication middleware to all socket connections
-io.use(authenticateSocketWithFallback);
+// Create /ws/game namespace for room-specific connections
+const gameNamespace = io.of('/ws/game');
 
-io.on('connection', (socket) => {
-  logger.info(`User connected: ${(socket as any).userId} (${(socket as any).profile?.isGuest ? 'guest' : 'authenticated'})`);
+// Apply authentication middleware to the namespace
+gameNamespace.use(authenticateSocketWithFallback);
+
+// Apply room join verification middleware
+gameNamespace.use(verifyRoomJoin);
+
+// Handle connections to the /ws/game namespace
+gameNamespace.on('connection', (socket) => {
+  logger.info(`User connected to /ws/game: ${(socket as any).userId} (${(socket as any).profile?.isGuest ? 'guest' : 'authenticated'})`);
   socketHandlers.handleConnection(socket);
 });
 

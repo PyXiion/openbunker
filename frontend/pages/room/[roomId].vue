@@ -44,68 +44,52 @@
 </template>
 
 <script setup lang="ts">
+import { useRoomService } from '~/services/room.service';
+
 const route = useRoute();
 const gameStore = useGameStore();
 const socket = useSocket();
 const auth = useAuth();
+const { leaveRoom: leaveRoomApi } = useRoomService();
 
 // Check if authenticated, redirect to login if not
 const isAuthenticated = computed(() => auth.currentUser.value || auth.guestUser.value);
 
-// Load persisted state and handle rejoin
+// Connect to room WebSocket on mount
 onMounted(async () => {
-  // Note: loadPersistedState() is already called in app.vue on startup
-  // Don't call it again here to avoid resetting playerId
-  
-  // Connect socket if not already connected (auth is already initialized in plugin)
-  if (!gameStore.connected) {
-    await socket.connect();
-  }
-  
-  // Wait for connection to be established
-  const waitForConnection = () => {
-    return new Promise<void>((resolve) => {
-      if (gameStore.connected) {
-        resolve();
-        return;
-      }
-      
-      const checkConnection = setInterval(() => {
-        if (gameStore.connected) {
-          clearInterval(checkConnection);
-          resolve();
-        }
-      }, 100);
-      
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        clearInterval(checkConnection);
-        resolve();
-      }, 5000);
-    });
-  };
-  
-  await waitForConnection();
-  
-  // Check if authenticated after connection
+  // Check if authenticated
   const playerName = auth.currentUser.value?.username || auth.guestUser.value?.username;
   if (!playerName) {
     // Redirect to login with redirect URL as query parameter
     navigateTo('/login?redirect=' + encodeURIComponent(route.path));
     return;
   }
-  
-  // Check if we need to rejoin a room or join via URL
+
   const currentRoomId = route.params.roomId as string;
-  
-  if (gameStore.room?.roomId === currentRoomId) {
-    // We have the room state but need to rejoin the socket room
-    const persistentId = gameStore.getOrCreatePersistentId();
-    socket.joinRoom(currentRoomId, playerName);
-  } else if (!gameStore.room || gameStore.room.roomId !== currentRoomId) {
-    // No room state or different room, attempt to join via URL
-    gameStore.setPlayerName(playerName);
-    socket.joinRoom(currentRoomId, playerName);
+
+  // If we don't have room state, user might have navigated directly to room URL
+  // In this case, we need to join via REST API first
+  if (!gameStore.room || gameStore.room.roomId !== currentRoomId) {
+    try {
+      gameStore.setPlayerName(playerName);
+      const response = await useRoomService().joinRoom(currentRoomId, playerName);
+      // Connect to WebSocket after successful REST call
+      await socket.connectToRoom(currentRoomId);
+    } catch (error) {
+      console.error('Failed to join room:', error);
+      gameStore.setError('errors.room_not_found');
+      navigateTo('/');
+      return;
+    }
+  } else {
+    // We already have room state from previous page, just connect WebSocket
+    try {
+      await socket.connectToRoom(currentRoomId);
+    } catch (error) {
+      console.error('Failed to connect to room WebSocket:', error);
+      gameStore.setError('errors.connection_failed');
+      navigateTo('/');
+    }
   }
 });
 
@@ -155,12 +139,19 @@ const confirmLeaveRoom = () => {
   }
 };
 
-const leaveRoom = () => {
-  // Emit leave room event to backend
+const leaveRoom = async () => {
+  // Call REST API to leave room
   if (gameStore.room) {
-    socket.leaveRoom(gameStore.room.roomId);
+    try {
+      await leaveRoomApi(gameStore.room.roomId);
+    } catch (error) {
+      console.error('Failed to leave room via REST API:', error);
+    }
   }
-  
+
+  // Disconnect WebSocket
+  socket.disconnectFromRoom();
+
   // Clear room state
   gameStore.clearRoomState();
   navigateTo('/');

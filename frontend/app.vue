@@ -36,7 +36,7 @@ onMounted(async () => {
   // Load persisted state on app startup
   gameStore.loadPersistedState();
   
-  // Initialize socket connection (auth is already initialized in plugin)
-  await socket.connect();
+  // Socket connection is now room-specific and handled in pages
+  // No longer maintain global persistent connection
 });
 </script>

@@ -1,10 +1,46 @@
 import express from 'express';
+import { Server } from 'socket.io';
 import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { createProfile, updateProfile, getProfile, getGameHistory, getUserStats } from './database';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
+import { CreateRoomSettings } from '../types';
+import { gameLogic } from '../server';
 
 const router = express.Router();
+let io: Server | null = null;
+
+// Set Socket.IO server instance for broadcasting
+export function setSocketIO(socketIO: Server) {
+  io = socketIO;
+}
+
+// Helper function to authenticate REST requests
+async function authenticateRequest(req: express.Request): Promise<{ userId: string; isGuest: boolean } | null> {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const guestUserId = req.headers['x-guest-user-id'] as string;
+
+  if (token) {
+    // JWT authentication
+    try {
+      const casdoor = getCasdoor();
+      const user = await casdoor.parseJwtToken(token);
+      if (user && user.id) {
+        return { userId: user.id, isGuest: false };
+      }
+    } catch (error) {
+      logger.error('JWT authentication failed:', error);
+    }
+  } else if (guestUserId) {
+    // Guest authentication
+    const profile = await getProfile(guestUserId);
+    if (profile && profile.isGuest) {
+      return { userId: guestUserId, isGuest: true };
+    }
+  }
+
+  return null;
+}
 
 // Validation schemas
 const guestAuthSchema = z.object({
@@ -22,6 +58,25 @@ const upgradeSchema = z.object({
 
 const usernameSchema = z.object({
   username: z.string().min(1).max(50).trim()
+});
+
+const createRoomSchema = z.object({
+  playerName: z.string().min(1).max(50).trim(),
+  language: z.string().optional().default('en'),
+  settings: z.object({
+    bunkerCapacity: z.number().min(2).max(10).optional(),
+    firstTraitToReveal: z.enum(['profession', 'biology', 'hobby', 'phobia', 'baggage', 'fact']).optional(),
+    enableContentFilter: z.boolean().optional(),
+  }).optional()
+});
+
+const joinRoomSchema = z.object({
+  roomId: z.string().min(1).max(20),
+  playerName: z.string().min(1).max(50).trim()
+});
+
+const leaveRoomSchema = z.object({
+  roomId: z.string().min(1).max(20)
 });
 
 // Initialize Casdoor SDK lazily to ensure environment variables are loaded
@@ -382,6 +437,202 @@ router.get('/stats', async (req, res) => {
   } catch (error) {
     logger.error('User stats fetch error:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: 'Failed to fetch user stats' });
+  }
+});
+
+// Room routes
+
+// POST /api/rooms/create - Create a new room
+router.post('/rooms/create', async (req, res) => {
+  try {
+    const result = createRoomSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid request data', details: result.error.issues });
+    }
+
+    const { playerName, language, settings } = result.data;
+
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+    }
+
+    // Fetch avatar URL from database
+    let avatarUrl: string | undefined;
+    try {
+      const profile = await getProfile(auth.userId);
+      avatarUrl = profile?.avatarUrl ?? undefined;
+    } catch (error) {
+      logger.error('Failed to fetch profile for avatar:', error);
+    }
+
+    // Create room using GameLogic (pass userId as temporary socketId placeholder)
+    const room = gameLogic.createRoom(
+      auth.userId, // socketId placeholder, will be updated when WebSocket connects
+      playerName,
+      auth.userId,
+      language,
+      settings,
+      avatarUrl,
+      auth.isGuest
+    );
+
+    // Return initial room state for optimistic UI updates
+    res.json({
+      roomId: room.roomId,
+      settings: room.settings,
+      players: Object.values(room.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        isHost: p.isHost,
+        isReady: p.isReady,
+        avatarUrl: p.avatarUrl,
+        isGuest: p.isGuest
+      })),
+      status: room.status
+    });
+  } catch (error) {
+    logger.error('Create room error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to create room', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// POST /api/rooms/join - Join an existing room
+router.post('/rooms/join', async (req, res) => {
+  try {
+    const result = joinRoomSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid request data', details: result.error.issues });
+    }
+
+    const { roomId, playerName } = result.data;
+
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+    }
+
+    // Check if room exists before attempting to join
+    const existingRoom = gameLogic.getRoom(roomId);
+    if (!existingRoom) {
+      return res.status(404).json({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
+    }
+
+    // Check if room is in LOBBY state
+    if (existingRoom.status !== 'LOBBY') {
+      return res.status(400).json({ error: 'Game already started', code: 'GAME_STARTED' });
+    }
+
+    // Check if room is full
+    if (Object.keys(existingRoom.players).length >= 10) {
+      return res.status(400).json({ error: 'Room is full', code: 'ROOM_FULL' });
+    }
+
+    // Fetch avatar URL from database
+    let avatarUrl: string | undefined;
+    try {
+      const profile = await getProfile(auth.userId);
+      avatarUrl = profile?.avatarUrl ?? undefined;
+    } catch (error) {
+      logger.error('Failed to fetch profile for avatar:', error);
+    }
+
+    // Join room using GameLogic (pass userId as temporary socketId placeholder)
+    const room = gameLogic.joinRoom(
+      roomId,
+      auth.userId, // socketId placeholder, will be updated when WebSocket connects
+      playerName,
+      auth.userId,
+      avatarUrl,
+      auth.isGuest
+    );
+
+    if (!room) {
+      return res.status(400).json({ error: 'Failed to join room', code: 'JOIN_FAILED' });
+    }
+
+    // Return current room state for optimistic UI updates
+    res.json({
+      success: true,
+      room: {
+        roomId: room.roomId,
+        status: room.status,
+        settings: room.settings,
+        players: Object.values(room.players).map(p => ({
+          id: p.id,
+          name: p.name,
+          isHost: p.isHost,
+          isReady: p.isReady,
+          avatarUrl: p.avatarUrl,
+          isGuest: p.isGuest
+        })),
+        round: room.round
+      }
+    });
+
+    // Broadcast room state to WebSocket room so other players get update
+    if (io) {
+      const gameNamespace = io.of('/ws/game');
+      // Broadcast to all connected sockets in the room
+      gameNamespace.to(roomId).emit('ROOM_STATE_UPDATE', room);
+    }
+  } catch (error) {
+    logger.error('Join room error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to join room', code: 'INTERNAL_ERROR' });
+  }
+});
+
+// POST /api/rooms/leave - Leave a room (for explicit exit button)
+router.post('/rooms/leave', async (req, res) => {
+  try {
+    const result = leaveRoomSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({ error: 'Invalid request data', details: result.error.issues });
+    }
+
+    const { roomId } = result.data;
+
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return res.status(401).json({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
+    }
+
+    // Get room
+    const room = gameLogic.getRoom(roomId);
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found', code: 'ROOM_NOT_FOUND' });
+    }
+
+    // Find player by userId
+    const player = Object.values(room.players).find(p => p.id === auth.userId);
+    if (!player) {
+      return res.status(400).json({ error: 'Player not in room', code: 'NOT_IN_ROOM' });
+    }
+
+    // Remove player from room
+    const success = gameLogic.removePlayer(roomId, auth.userId);
+    if (!success) {
+      return res.status(400).json({ error: 'Failed to leave room', code: 'LEAVE_FAILED' });
+    }
+
+    res.json({ success: true });
+
+    // Broadcast room state to WebSocket room so other players get update
+    const updatedRoom = gameLogic.getRoom(roomId);
+    if (io && updatedRoom) {
+      const gameNamespace = io.of('/ws/game');
+      // Broadcast to all connected sockets in the room
+      gameNamespace.to(roomId).emit('ROOM_STATE_UPDATE', updatedRoom);
+    }
+  } catch (error) {
+    logger.error('Leave room error:', { error: error instanceof Error ? error.message : String(error) });
+    res.status(500).json({ error: 'Failed to leave room', code: 'INTERNAL_ERROR' });
   }
 });
 

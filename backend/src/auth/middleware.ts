@@ -2,6 +2,7 @@ import { Socket } from 'socket.io';
 import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { getProfile, createProfile, updateProfile } from './database';
 import { logger } from '../utils/logger';
+import { gameLogic } from '../server';
 
 // Initialize Casdoor SDK with validation
 function getCasdoorSDK() {
@@ -190,10 +191,46 @@ export function canAccessRoom(socket: Socket, roomId: string): boolean {
 
 export function requireRoomAccess(socket: Socket, roomId: string): AuthenticatedSocket {
   const authSocket = requireAuthentication(socket);
-  
+
   if (!canAccessRoom(socket, roomId)) {
     throw new Error('Access denied to room');
   }
-  
+
   return authSocket;
+}
+
+/**
+ * Middleware to verify user has joined room via REST API before allowing WebSocket connection.
+ * This ensures the WebSocket connection is only accepted after successful REST join/create.
+ */
+export async function verifyRoomJoin(socket: Socket, next: (err?: Error) => void) {
+  try {
+    const roomId = socket.handshake.auth.roomId as string;
+    const authSocket = socket as AuthenticatedSocket;
+
+    if (!roomId) {
+      return next(new Error('Room ID required in auth payload'));
+    }
+
+    if (!authSocket.userId) {
+      return next(new Error('Authentication required'));
+    }
+
+    // Verify room exists
+    const room = gameLogic.getRoom(roomId);
+    if (!room) {
+      return next(new Error('Room not found'));
+    }
+
+    // Verify user is in the room (via REST join/create)
+    const player = Object.values(room.players).find(p => p.id === authSocket.userId);
+    if (!player) {
+      return next(new Error('User not in room. Please join via REST API first.'));
+    }
+
+    next();
+  } catch (error) {
+    logger.error('Room join verification failed:', error);
+    next(new Error('Room join verification failed'));
+  }
 }

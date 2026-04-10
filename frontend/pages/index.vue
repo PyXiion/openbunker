@@ -115,35 +115,6 @@
             <button @click="gameStore.setKickedMessage(null)" class="text-accent hover:text-contrast ml-2 text-xl">×</button>
           </div>
 
-          <!-- Connection Status -->
-          <div class="mt-4 flex items-center justify-center gap-2 font-mono text-sm">
-            <div 
-              class="border-2 border-contrast w-4 h-4 flex items-center justify-center"
-              :class="gameStore.connected ? 'bg-base' : 'bg-contrast'"
-            >
-              <span 
-                class="block w-2 h-2"
-                :class="gameStore.connected ? 'bg-accent' : 'bg-base'"
-              ></span>
-            </div>
-            <div class="border-2 border-contrast px-2 py-1 bg-base flex items-center gap-2">
-              <span class="text-contrast/60 uppercase text-xs">{{ $t('pages.index.status') }}</span>
-              <span 
-                class="font-bold uppercase"
-                :class="gameStore.connected ? 'text-contrast' : 'text-accent'"
-              >
-                {{ gameStore.connected ? $t('pages.index.connected') : $t('pages.index.disconnected') }}
-              </span>
-            </div>
-            <div class="flex gap-px border-2 border-contrast p-px">
-              <span 
-                v-for="i in 3" 
-                :key="i"
-                class="w-1 h-3"
-                :class="gameStore.connected ? 'bg-contrast' : 'bg-gray-300'"
-              ></span>
-            </div>
-          </div>
         </div>
 
         <!-- Instructions -->
@@ -158,14 +129,18 @@
 
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it';
+import { useRoomService } from '~/services/room.service';
 
 const gameStore = useGameStore();
 const socket = useSocket();
 const auth = useAuth();
+const roomService = useRoomService();
 
 const roomId = ref('');
 const isCreatingRoom = ref(false);
 const isJoiningRoom = ref(false);
+const isLoading = ref(false);
+const loadingMessage = ref('');
 
 const md = new MarkdownIt();
 
@@ -178,22 +153,50 @@ const getPlayerName = () => {
   return auth.currentUser.value?.username || auth.guestUser.value?.username || '';
 };
 
-const createRoom = () => {
+const createRoom = async () => {
   const playerName = getPlayerName();
   if (!playerName) return;
-  
+
   isCreatingRoom.value = true;
+  isLoading.value = true;
+  loadingMessage.value = 'Creating room...';
   gameStore.setPlayerName(playerName);
-  socket.createRoom(playerName);
+
+  try {
+    const response = await roomService.createRoom(playerName);
+    // Connect to WebSocket after successful REST call
+    await socket.connectToRoom(response.roomId);
+    loadingMessage.value = 'Connecting...';
+  } catch (error) {
+    console.error('Create room error:', error);
+    gameStore.setError('errors.generic');
+    isCreatingRoom.value = false;
+    isLoading.value = false;
+    loadingMessage.value = '';
+  }
 };
 
-const joinRoom = () => {
+const joinRoom = async () => {
   const playerName = getPlayerName();
   if (!playerName || !roomId.value.trim()) return;
-  
+
   isJoiningRoom.value = true;
+  isLoading.value = true;
+  loadingMessage.value = 'Joining room...';
   gameStore.setPlayerName(playerName);
-  socket.joinRoom(roomId.value.toUpperCase(), playerName);
+
+  try {
+    const response = await roomService.joinRoom(roomId.value.toUpperCase(), playerName);
+    // Connect to WebSocket after successful REST call
+    await socket.connectToRoom(roomId.value.toUpperCase());
+    loadingMessage.value = 'Connecting...';
+  } catch (error) {
+    console.error('Join room error:', error);
+    gameStore.setError('errors.generic');
+    isJoiningRoom.value = false;
+    isLoading.value = false;
+    loadingMessage.value = '';
+  }
 };
 
 const handleEnter = () => {
@@ -212,6 +215,7 @@ onMounted(() => {
   // Reset loading states on mount
   isCreatingRoom.value = false;
   isJoiningRoom.value = false;
+  isLoading.value = false;
   // Clear room state to ensure buttons are enabled
   gameStore.clearRoomState();
 });
@@ -221,6 +225,8 @@ watch(() => gameStore.room, (room) => {
   if (room) {
     isCreatingRoom.value = false;
     isJoiningRoom.value = false;
+    isLoading.value = false;
+    loadingMessage.value = '';
     navigateTo(`/room/${room.roomId}`);
   }
 });
@@ -230,14 +236,8 @@ watch(() => gameStore.error, (error) => {
   if (error) {
     isCreatingRoom.value = false;
     isJoiningRoom.value = false;
-  }
-});
-
-// Reset loading states on reconnection
-watch(() => gameStore.connected, (connected) => {
-  if (connected) {
-    isCreatingRoom.value = false;
-    isJoiningRoom.value = false;
+    isLoading.value = false;
+    loadingMessage.value = '';
   }
 });
 

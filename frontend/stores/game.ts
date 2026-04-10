@@ -75,7 +75,7 @@ export const useGameStore = defineStore('game', {
     playerName: null as string | null,
     persistentId: null as string | null,
     isGuest: null as boolean | null,
-    connected: false,
+    isReconnecting: false,
     error: null as string | null,
     kickedMessage: null as string | null,
     chatHistory: [] as ChatMessage[]
@@ -214,8 +214,8 @@ export const useGameStore = defineStore('game', {
       localStorage.setItem('persistentId', id);
     },
 
-    setConnected(connected: boolean) {
-      this.connected = connected;
+    setReconnecting(isReconnecting: boolean) {
+      this.isReconnecting = isReconnecting;
     },
 
     setError(error: string | null) {
@@ -237,7 +237,7 @@ export const useGameStore = defineStore('game', {
       // Keep playerName for reuse on next game
       this.persistentId = null;
       this.isGuest = null;
-      this.connected = false;
+      this.isReconnecting = false;
       this.error = null;
       localStorage.removeItem('gameRoom');
       localStorage.removeItem('playerId');
