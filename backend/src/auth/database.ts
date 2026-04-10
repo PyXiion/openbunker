@@ -117,6 +117,7 @@ export async function createOrUpdateUserStats(userId: string): Promise<UserStats
 
 export interface GameHistoryData {
   roomId: string;
+  roomCode: string;
   profileId: string | undefined;
   playerName: string;
   gameStatus: string;

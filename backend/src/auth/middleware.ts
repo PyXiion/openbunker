@@ -1,50 +1,8 @@
 import { Socket } from 'socket.io';
-import * as CasdoorSDK from 'casdoor-nodejs-sdk';
 import { getProfile, createProfile, updateProfile } from './database';
 import { logger } from '../utils/logger';
 import { gameLogic } from '../server';
-
-// Initialize Casdoor SDK with validation
-function getCasdoorSDK() {
-  // Validate required Casdoor configuration
-  const requiredEnvVars = [
-    'CASDOOR_URL',
-    'CASDOOR_CLIENT_ID',
-    'CASDOOR_CLIENT_SECRET',
-    'CASDOOR_CERT',
-  ];
-
-  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  if (missingEnvVars.length > 0) {
-    logger.error(`Missing required Casdoor environment variables: ${missingEnvVars.join(', ')}`);
-    throw new Error(`Missing required Casdoor environment variables: ${missingEnvVars.join(', ')}`);
-  }
-
-  // Clean certificate format
-  const certificate = process.env.CASDOOR_CERT || '';
-  const cleanedCert = certificate
-    .split(/\\n|\n/)
-    .map(line => line.trim())
-    .join('\n');
-
-  return new CasdoorSDK.SDK({
-    endpoint: process.env.CASDOOR_URL || process.env.CASDOOR_ENDPOINT || 'http://localhost:8000',
-    clientId: process.env.CASDOOR_CLIENT_ID || '',
-    clientSecret: process.env.CASDOOR_CLIENT_SECRET || '',
-    appName: process.env.CASDOOR_APP_NAME || 'bunker',
-    orgName: process.env.CASDOOR_ORG_NAME || 'bunker',
-    certificate: cleanedCert,
-  });
-}
-
-let casdoor: CasdoorSDK.SDK | null = null;
-
-function getCasdoor() {
-  if (!casdoor) {
-    casdoor = getCasdoorSDK();
-  }
-  return casdoor;
-}
+import { casdoorService } from '../services/casdoorService';
 
 export interface AuthenticatedSocket extends Socket {
   userId: string;
@@ -66,7 +24,7 @@ export async function authenticateSocket(socket: Socket, next: (err?: Error) => 
       return next(new Error('No authentication token provided'));
     }
 
-    const user = await getCasdoor().parseJwtToken(token);
+    const user = await casdoorService.parseJwtToken(token);
     
     if (!user || !user.id) {
       return next(new Error('Invalid token'));
