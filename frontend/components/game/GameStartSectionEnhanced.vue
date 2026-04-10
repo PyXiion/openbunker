@@ -12,8 +12,8 @@
       {{ $t('components.gameLobby.reconnecting') }}
     </div>
   
-    <div v-else-if="isChoosingNewHost" class="status-banner text-sm font-mono text-accent tech-pulse tech-signal-noise">
-      {{ $t('components.gameLobby.choosingNewHost', { playerName: nextHostName, seconds: remainingSeconds }) }}
+    <div v-else-if="isHostDisconnected" class="status-banner text-sm font-mono text-accent tech-pulse tech-signal-noise">
+      {{ $t('components.gameLobby.hostDisconnected', { playerName: nextHostName, seconds: remainingSeconds }) }}
     </div>
   
     <div v-else class="text-sm font-mono text-contrast/70 p-2 border border-contrast/30 bg-contrast/5">
@@ -26,18 +26,18 @@
 
 <script setup lang="ts">
 import TechButton from '../ui/TechButton.vue';
+import { useHostDisconnectCountdown } from '~/composables/useHostDisconnectCountdown';
 
 defineProps<{
   canStartGame: boolean;
   hasPlayerId: boolean;
-  isChoosingNewHost: boolean;
   isCurrentUserHost: boolean;
-  nextHostName: string;
-  remainingSeconds: number;
   minPlayers: number;
 }>();
 
 defineEmits<{
   start: [];
 }>();
+
+const { isHostDisconnected, nextHostName, remainingSeconds } = useHostDisconnectCountdown();
 </script>

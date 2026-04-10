@@ -95,6 +95,7 @@ export default defineNuxtConfig({
       casdoorOrgName: process.env.CASDOOR_ORG_NAME || 'bunker',
       gameConfig: generatedConfig.game,
       socialConfig: generatedConfig.social,
+      supportConfig: generatedConfig.support,
     }
   }
 })

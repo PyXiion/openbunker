@@ -40,10 +40,7 @@
     <GameStartSectionEnhanced
       :can-start-game="gameStore.canStartGame"
       :has-player-id="!!gameStore.playerId"
-      :is-choosing-new-host="isChoosingNewHost"
       :is-current-user-host="!!gameStore.currentPlayer?.isHost"
-      :next-host-name="nextHostName"
-      :remaining-seconds="remainingSeconds"
       :min-players="gameConfig.min_players"
       @start="$emit('start')"
     />
@@ -55,7 +52,6 @@ import { computed, ref, watch } from 'vue';
 import { useGameStore } from '~/stores/game';
 import { useHotkeys } from '~/composables/useHotkeys';
 import { useSocket } from '~/composables/useSocket';
-import { useHostSelectionCountdown } from '~/composables/useHostSelectionCountdown';
 import PlayerListEnhanced from '../player/PlayerListEnhanced.vue';
 import GameSettingsUnified from './GameSettingsUnified.vue';
 import GameStartSectionEnhanced from './GameStartSectionEnhanced.vue';
@@ -135,9 +131,6 @@ const updateCapacity = () => {
   customCapacity.value = value;
   updateSettings(gameStore.room.roomId, { bunkerCapacity: value });
 };
-
-// Host selection countdown
-const { isChoosingNewHost, nextHostName, remainingSeconds } = useHostSelectionCountdown();
 
 // First trait to reveal settings
 const selectedFirstTrait = ref<string>('');

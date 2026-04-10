@@ -16,13 +16,31 @@ const DEFAULT_CONFIG = {
     telegram_url: 'https://t.me/PyXiion_channel',
     discord_url: 'https://discord.gg/KpAMMCdcrJ',
   },
+  support: {
+    report_bug_url: '',
+    feature_request_url: '',
+    faq_url: '',
+  },
 };
 
 function mergeConfig(base, override) {
-  return {
-    game: { ...base.game, ...override.game },
-    social: { ...base.social, ...override.social },
-  };
+  const merged = { ...base };
+  
+  // Iterate over all keys in base and merge with override
+  for (const key in base) {
+    if (override[key]) {
+      merged[key] = { ...base[key], ...override[key] };
+    }
+  }
+  
+  // Add any keys from override that aren't in base
+  for (const key in override) {
+    if (!base[key]) {
+      merged[key] = override[key];
+    }
+  }
+  
+  return merged;
 }
 
 function loadConfig() {
@@ -61,11 +79,8 @@ function loadConfig() {
 function main() {
   const config = loadConfig();
   
-  // Generate frontend-specific config
-  const frontendConfig = {
-    game: config.game,
-    social: config.social,
-  };
+  // Generate frontend-specific config (include all sections)
+  const frontendConfig = { ...config };
   
   // Write to frontend config directory
   const outputDir = path.join(process.cwd(), 'config');
