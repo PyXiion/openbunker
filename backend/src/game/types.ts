@@ -16,6 +16,7 @@ export type ChatEventType =
   | 'BUNKER_ROOM_REVEALED'
   | 'GAME_FINISHED'
   | 'HOST_CHANGED'
+  | 'HOST_DISCONNECTED'
   | 'CHAT_MESSAGE';
 
 export interface ChatMessage {
@@ -38,13 +39,13 @@ export interface Trait {
 
 /**
  * Represents a player in the game.
- * @property id - Persistent UUID (constant across reconnects)
+ * @property id - Player userId (from authentication, stable across reconnections)
  * @property socketId - Current Socket.io connection ID (changes on reconnect)
  * @property traits - All 6 hidden trait cards
  */
 export interface Player {
-  id: string; // persistentId (constant)
-  socketId: string; // changes on reconnect
+  id: string;
+  socketId: string;
   name: string;
   isHost: boolean;
   isExiled: boolean;
@@ -97,11 +98,14 @@ export interface CatastropheCard {
 /**
  * Master game state stored on the server.
  * Contains all player data unmasked.
- * @property hostOwnershipExpiry - Timestamp when host transfer TTL expires (undefined if not pending)
+ * @property roomId - Internal UUID (stable, permanent)
+ * @property roomCode - User-facing 6-character code (shareable, regeneratable)
  * @property turnOrder - Array of player IDs in turn sequence
+ * @property hostDisconnectedAt - Timestamp when host disconnected (undefined if host is online)
  */
 export interface GameRoom {
   roomId: string;
+  roomCode: string;
   status: GameStatus;
   round: number;
   catastrophe: CatastropheCard | null;
@@ -109,13 +113,13 @@ export interface GameRoom {
   players: Record<string, Player>;
   turnOrder: string[];
   currentTurnIndex: number;
-  hostOwnershipExpiry?: number;
   cardsToRevealPerTurn: number;
   cardsRevealedThisTurn: number;
   language: string;
   settings?: GameSettings;
   chatHistory: ChatMessage[];
   gameStartedAt?: number;
+  hostDisconnectedAt?: number;
 }
 
 /**
@@ -123,8 +127,8 @@ export interface GameRoom {
  * @property traits - Hidden traits show only name/description as '???' if not revealed
  */
 export interface ClientPlayer {
-  id: string; // persistentId (constant)
-  socketId: string; // changes on reconnect
+  id: string;
+  socketId: string;
   name: string;
   isHost: boolean;
   isExiled: boolean;

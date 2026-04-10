@@ -43,11 +43,24 @@ describe('GameLogic', () => {
     });
   });
 
+  describe('generateRoomCode', () => {
+    it('should generate a 6-character room code', () => {
+      const roomCode = gameLogic.generateRoomCode();
+      expect(roomCode).toHaveLength(6);
+      expect(roomCode).toMatch(/^[A-Z0-9]+$/);
+    });
+
+    it('should generate unique room codes', () => {
+      const code1 = gameLogic.generateRoomCode();
+      const code2 = gameLogic.generateRoomCode();
+      expect(code1).not.toBe(code2);
+    });
+  });
+
   describe('generateRoomId', () => {
-    it('should generate a 6-character room ID', () => {
+    it('should generate a UUID room ID', () => {
       const roomId = gameLogic.generateRoomId();
-      expect(roomId).toHaveLength(6);
-      expect(roomId).toMatch(/^[A-Z0-9]+$/);
+      expect(roomId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
     });
 
     it('should generate unique room IDs', () => {
@@ -55,33 +68,12 @@ describe('GameLogic', () => {
       const id2 = gameLogic.generateRoomId();
       expect(id1).not.toBe(id2);
     });
-
-    it('should avoid collisions with existing rooms', () => {
-      const roomId1 = gameLogic.generateRoomId();
-      gameLogic.createRoom('socket1', 'Player1', undefined, 'en');
-      const roomId2 = gameLogic.generateRoomId();
-      expect(roomId2).not.toBe(roomId1);
-    });
   });
 
-  describe('generatePersistentId', () => {
-    it('should generate a UUID-like ID', () => {
-      const id = gameLogic.generatePersistentId();
-      expect(id).toBeTruthy();
-      expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(20);
-    });
-
-    it('should generate unique IDs', () => {
-      const id1 = gameLogic.generatePersistentId();
-      const id2 = gameLogic.generatePersistentId();
-      expect(id1).not.toBe(id2);
-    });
-  });
 
   describe('createRoom', () => {
-    it('should create a room with host', () => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer');
+    it('should create a room with host', async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       
       expect(room).toBeTruthy();
       expect(room.status).toBe('LOBBY');
@@ -90,42 +82,35 @@ describe('GameLogic', () => {
       expect(room.turnOrder).toHaveLength(1);
     });
 
-    it('should set host as first player', () => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer');
+    it('should set host as first player', async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       const hostId = room.turnOrder[0];
       const host = room.players[hostId];
       
       expect(host.isHost).toBe(true);
       expect(host.name).toBe('HostPlayer');
-      expect(host.socketId).toBe('socket1');
+      expect(host.socketId).toBe('');
     });
 
-    it('should accept custom persistent ID', () => {
-      const customId = 'custom-persistent-id';
-      const room = gameLogic.createRoom('socket1', 'HostPlayer', customId);
-      
-      const hostId = room.turnOrder[0];
-      expect(hostId).toBe(customId);
-    });
 
-    it('should accept custom settings', () => {
+    it('should accept custom settings', async () => {
       const settings = { bunkerCapacity: 5 };
-      const room = gameLogic.createRoom('socket1', 'HostPlayer', undefined, 'en', settings);
+      const room = await gameLogic.createRoom('user1', 'HostPlayer', 'en', settings);
       
       expect(room.settings).toEqual(settings);
     });
 
-    it('should store room in rooms map', () => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer');
+    it('should store room in rooms map', async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       const retrieved = gameLogic.getRoom(room.roomId);
       
       expect(retrieved).toBeTruthy();
       expect(retrieved?.roomId).toBe(room.roomId);
     });
 
-    it('should accept avatar URL', () => {
+    it('should accept avatar URL', async () => {
       const avatarUrl = 'https://example.com/avatar.png';
-      const room = gameLogic.createRoom('socket1', 'HostPlayer', undefined, 'en', undefined, avatarUrl);
+      const room = await gameLogic.createRoom('user1', 'HostPlayer', 'en', undefined, avatarUrl);
       
       const hostId = room.turnOrder[0];
       expect(room.players[hostId].avatarUrl).toBe(avatarUrl);
@@ -135,42 +120,34 @@ describe('GameLogic', () => {
   describe('joinRoom', () => {
     let roomId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       roomId = room.roomId;
     });
 
-    it('should allow player to join existing room in LOBBY', () => {
-      const result = gameLogic.joinRoom(roomId, 'socket2', 'Player2');
+    it('should allow player to join existing room in LOBBY', async () => {
+      const result = await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       
       expect(result).toBeTruthy();
       expect(Object.keys(result!.players)).toHaveLength(2);
     });
 
-    it('should return null for non-existent room', () => {
-      const result = gameLogic.joinRoom('INVALID', 'socket2', 'Player2');
+    it('should return null for non-existent room', async () => {
+      const result = await gameLogic.joinRoom('INVALID', 'user2', 'Player2');
       expect(result).toBeNull();
     });
 
-    it('should return null if room is not in LOBBY', () => {
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'player2');
+    it('should return null if room is not in LOBBY', async () => {
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
-      const result = gameLogic.joinRoom(roomId, 'socket3', 'Player3');
+      const result = await gameLogic.joinRoom(roomId, 'user3', 'Player3');
       expect(result).toBeNull();
     });
 
-    it('should update socket ID for rejoining player', () => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'persistent1');
-      const roomId2 = room.roomId;
-      
-      const result = gameLogic.joinRoom(roomId2, 'socket2', 'Player1', 'persistent1');
-      expect(result).toBeTruthy();
-      expect(result!.players['persistent1'].socketId).toBe('socket2');
-    });
 
-    it('should accept avatar URL for joining player', () => {
+    it('should accept avatar URL for joining player', async () => {
       const avatarUrl = 'https://example.com/avatar2.png';
-      const result = gameLogic.joinRoom(roomId, 'socket2', 'Player2', undefined, avatarUrl);
+      const result = await gameLogic.joinRoom(roomId, 'user2', 'Player2', avatarUrl);
       
       expect(result).toBeTruthy();
       const newPlayerId = Object.keys(result!.players).find(id => result!.players[id].name === 'Player2');
@@ -181,13 +158,13 @@ describe('GameLogic', () => {
   describe('startGame', () => {
     let roomId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       roomId = room.roomId;
     });
 
-    it('should start game with minimum players', () => {
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2');
+    it('should start game with minimum players', async () => {
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       const result = gameLogic.startGame(roomId);
       
       expect(result).toBe(true);
@@ -200,8 +177,8 @@ describe('GameLogic', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false if room not in LOBBY', () => {
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2');
+    it('should return false if room not in LOBBY', async () => {
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
       const result = gameLogic.startGame(roomId);
       expect(result).toBe(false);
@@ -212,8 +189,8 @@ describe('GameLogic', () => {
       expect(result).toBe(false);
     });
 
-    it('should initialize catastrophe and bunker', () => {
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2');
+    it('should initialize catastrophe and bunker', async () => {
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
       
       const room = gameLogic.getRoom(roomId);
@@ -221,8 +198,8 @@ describe('GameLogic', () => {
       expect(room?.bunker).toBeTruthy();
     });
 
-    it('should deal traits to all players', () => {
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2');
+    it('should deal traits to all players', async () => {
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
       
       const room = gameLogic.getRoom(roomId);
@@ -238,11 +215,11 @@ describe('GameLogic', () => {
     let roomId: string;
     let playerId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'p1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1', 'en');
       roomId = room.roomId;
-      playerId = 'p1';
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'p2');
+      playerId = 'user1';
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
     });
 
@@ -259,15 +236,15 @@ describe('GameLogic', () => {
       expect(result).toBe(false);
     });
 
-    it('should return false if room not in PLAYING', () => {
-      const room = gameLogic.createRoom('socket3', 'Player3', 'p3');
+    it('should return false if room not in PLAYING', async () => {
+      const room = await gameLogic.createRoom('user3', 'Player3');
       const roomId2 = room.roomId;
-      const result = gameLogic.revealCard(roomId2, 'p3', 'profession');
+      const result = gameLogic.revealCard(roomId2, 'user3', 'profession');
       expect(result).toBe(false);
     });
 
     it('should return false if not current player turn', () => {
-      const result = gameLogic.revealCard(roomId, 'p2', 'profession');
+      const result = gameLogic.revealCard(roomId, 'user2', 'profession');
       expect(result).toBe(false);
     });
 
@@ -277,14 +254,14 @@ describe('GameLogic', () => {
       expect(result).toBe(false);
     });
 
-    it('should enforce first trait rule when configured', () => {
-      const room = gameLogic.createRoom('socket3', 'Player3', 'p3', 'en', { firstTraitToReveal: 'profession' as TraitType });
+    it('should enforce first trait rule when configured', async () => {
+      const room = await gameLogic.createRoom('user3', 'Player3', 'en', { firstTraitToReveal: 'profession' as TraitType });
       const roomId2 = room.roomId;
-      gameLogic.joinRoom(roomId2, 'socket4', 'Player4', 'p4');
+      await gameLogic.joinRoom(roomId2, 'user4', 'Player4');
       gameLogic.startGame(roomId2);
       
       // Try to reveal biology before profession
-      const result = gameLogic.revealCard(roomId2, 'p3', 'biology');
+      const result = gameLogic.revealCard(roomId2, 'user3', 'biology');
       expect(result).toBe(false);
     });
   });
@@ -293,16 +270,18 @@ describe('GameLogic', () => {
     let roomId: string;
     let playerId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'p1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
       roomId = room.roomId;
-      playerId = 'p1';
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'p2');
+      playerId = 'user1';
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
     });
 
     it('should end turn for current player', () => {
-      gameLogic.revealCard(roomId, playerId, 'profession');
+      const revealResult = gameLogic.revealCard(roomId, playerId, 'profession');
+      expect(revealResult).toBe(true);
+      
       const result = gameLogic.endTurn(roomId, playerId);
       expect(result).toBe(true);
       
@@ -316,17 +295,17 @@ describe('GameLogic', () => {
     });
 
     it('should return false if not current player turn', () => {
-      const result = gameLogic.endTurn(roomId, 'p2');
+      const result = gameLogic.endTurn(roomId, 'user2');
       expect(result).toBe(false);
     });
 
-    it('should return false if first trait not revealed when required', () => {
-      const room = gameLogic.createRoom('socket3', 'Player3', 'p3', 'en', { firstTraitToReveal: 'profession' as TraitType });
+    it('should return false if first trait not revealed when required', async () => {
+      const room = await gameLogic.createRoom('user3', 'Player3', 'en', { firstTraitToReveal: 'profession' as TraitType });
       const roomId2 = room.roomId;
-      gameLogic.joinRoom(roomId2, 'socket4', 'Player4', 'p4');
+      await gameLogic.joinRoom(roomId2, 'user4', 'Player4');
       gameLogic.startGame(roomId2);
       
-      const result = gameLogic.endTurn(roomId2, 'p3');
+      const result = gameLogic.endTurn(roomId2, 'user3');
       expect(result).toBe(false);
     });
 
@@ -339,8 +318,8 @@ describe('GameLogic', () => {
       gameLogic.revealCard(roomId, playerId, 'profession');
       gameLogic.endTurn(roomId, playerId);
       
-      gameLogic.revealCard(roomId, 'p2', 'profession');
-      gameLogic.endTurn(roomId, 'p2');
+      gameLogic.revealCard(roomId, 'user2', 'profession');
+      gameLogic.endTurn(roomId, 'user2');
       
       const room = gameLogic.getRoom(roomId);
       expect(room?.status).toBe('VOTING');
@@ -350,65 +329,65 @@ describe('GameLogic', () => {
   describe('submitVote', () => {
     let roomId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'p1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
       roomId = room.roomId;
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'p2');
-      gameLogic.joinRoom(roomId, 'socket3', 'Player3', 'p3');
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
+      await gameLogic.joinRoom(roomId, 'user3', 'Player3');
       gameLogic.startGame(roomId);
       
       // Advance to voting phase
-      gameLogic.revealCard(roomId, 'p1', 'profession');
-      gameLogic.endTurn(roomId, 'p1');
-      gameLogic.revealCard(roomId, 'p2', 'profession');
-      gameLogic.endTurn(roomId, 'p2');
-      gameLogic.revealCard(roomId, 'p3', 'profession');
-      gameLogic.endTurn(roomId, 'p3');
+      gameLogic.revealCard(roomId, 'user1', 'profession');
+      gameLogic.endTurn(roomId, 'user1');
+      gameLogic.revealCard(roomId, 'user2', 'profession');
+      gameLogic.endTurn(roomId, 'user2');
+      gameLogic.revealCard(roomId, 'user3', 'profession');
+      gameLogic.endTurn(roomId, 'user3');
     });
 
     it('should accept vote from active player', () => {
-      const result = gameLogic.submitVote(roomId, 'p1', 'p2');
+      const result = gameLogic.submitVote(roomId, 'user1', 'user2');
       expect(result.success).toBe(true);
     });
 
     it('should return false for non-existent room', () => {
-      const result = gameLogic.submitVote('INVALID', 'p1', 'p2');
+      const result = gameLogic.submitVote('INVALID', 'user1', 'user2');
       expect(result.success).toBe(false);
     });
 
-    it('should return false if room not in VOTING', () => {
-      const room = gameLogic.createRoom('socket4', 'Player4', 'p4');
+    it('should return false if room not in VOTING', async () => {
+      const room = await gameLogic.createRoom('user4', 'Player4');
       const roomId2 = room.roomId;
-      const result = gameLogic.submitVote(roomId2, 'p4', 'p4');
+      const result = gameLogic.submitVote(roomId2, 'user4', 'user4');
       expect(result.success).toBe(false);
     });
 
     it('should return false if player already voted', () => {
-      gameLogic.submitVote(roomId, 'p1', 'p2');
-      const result = gameLogic.submitVote(roomId, 'p1', 'p3');
+      gameLogic.submitVote(roomId, 'user1', 'user2');
+      const result = gameLogic.submitVote(roomId, 'user1', 'user3');
       expect(result.success).toBe(false);
     });
 
     it('should return false if voter is exiled', () => {
       const room = gameLogic.getRoom(roomId);
-      if (room) room.players['p1'].isExiled = true;
+      if (room) room.players['user1'].isExiled = true;
       
-      const result = gameLogic.submitVote(roomId, 'p1', 'p2');
+      const result = gameLogic.submitVote(roomId, 'user1', 'user2');
       expect(result.success).toBe(false);
     });
 
     it('should return false if target is exiled', () => {
       const room = gameLogic.getRoom(roomId);
-      if (room) room.players['p2'].isExiled = true;
+      if (room) room.players['user2'].isExiled = true;
       
-      const result = gameLogic.submitVote(roomId, 'p1', 'p2');
+      const result = gameLogic.submitVote(roomId, 'user1', 'user2');
       expect(result.success).toBe(false);
     });
 
     it('should process voting when all players have voted', () => {
-      gameLogic.submitVote(roomId, 'p1', 'p2');
-      gameLogic.submitVote(roomId, 'p2', 'p1');
-      const result = gameLogic.submitVote(roomId, 'p3', 'p1');
+      gameLogic.submitVote(roomId, 'user1', 'user2');
+      gameLogic.submitVote(roomId, 'user2', 'user1');
+      const result = gameLogic.submitVote(roomId, 'user3', 'user1');
       
       expect(result.success).toBe(true);
       expect(result.events.length).toBeGreaterThan(0);
@@ -418,44 +397,44 @@ describe('GameLogic', () => {
   describe('removePlayer', () => {
     let roomId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer', 'host1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'HostPlayer');
       roomId = room.roomId;
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'player2');
+      await gameLogic.joinRoom(roomId, 'user2', 'Player2');
     });
 
     it('should remove player from room', () => {
-      const result = gameLogic.removePlayer(roomId, 'player2');
+      const result = gameLogic.removePlayer(roomId, 'user2');
       expect(result).toBe(true);
       
       const room = gameLogic.getRoom(roomId);
-      expect(room?.players['player2']).toBeUndefined();
+      expect(room?.players['user2']).toBeUndefined();
     });
 
     it('should return false for non-existent room', () => {
-      const result = gameLogic.removePlayer('INVALID', 'player2');
+      const result = gameLogic.removePlayer('INVALID', 'user2');
       expect(result).toBe(false);
     });
 
     it('should transfer host immediately on voluntary leave', () => {
-      const result = gameLogic.removePlayer(roomId, 'host1', true);
+      const result = gameLogic.removePlayer(roomId, 'user1', true);
       expect(result).toBe(true);
       
       const room = gameLogic.getRoom(roomId);
-      expect(room?.players['player2'].isHost).toBe(true);
+      expect(room?.players['user2'].isHost).toBe(true);
     });
 
-    it('should set TTL for host on disconnect', () => {
-      const result = gameLogic.removePlayer(roomId, 'host1', false);
+    it('should transfer host immediately when host is removed', () => {
+      const result = gameLogic.removePlayer(roomId, 'user1', false);
       expect(result).toBe(true);
       
       const room = gameLogic.getRoom(roomId);
-      expect(room?.hostOwnershipExpiry).toBeDefined();
+      expect(room?.players['user2'].isHost).toBe(true);
     });
 
     it('should delete room when empty', () => {
-      gameLogic.removePlayer(roomId, 'player2');
-      gameLogic.removePlayer(roomId, 'host1');
+      gameLogic.removePlayer(roomId, 'user2');
+      gameLogic.removePlayer(roomId, 'user1');
       
       const room = gameLogic.getRoom(roomId);
       expect(room).toBeNull();
@@ -466,45 +445,9 @@ describe('GameLogic', () => {
       const room = gameLogic.getRoom(roomId);
       const originalTurnIndex = room?.currentTurnIndex;
       
-      gameLogic.removePlayer(roomId, 'host1');
+      gameLogic.removePlayer(roomId, 'user1');
       const updatedRoom = gameLogic.getRoom(roomId);
       expect(updatedRoom?.currentTurnIndex).toBe(0);
-    });
-  });
-
-  describe('checkHostOwnershipTTL', () => {
-    let roomId: string;
-
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'HostPlayer', 'host1');
-      roomId = room.roomId;
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'player2');
-    });
-
-    it('should return false if no TTL set', () => {
-      const result = gameLogic.checkHostOwnershipTTL(roomId);
-      expect(result).toBe(false);
-    });
-
-    it('should return false if TTL not expired', () => {
-      gameLogic.removePlayer(roomId, 'host1', false);
-      const result = gameLogic.checkHostOwnershipTTL(roomId);
-      expect(result).toBe(false);
-    });
-
-    it('should transfer host when TTL expired', () => {
-      gameLogic.removePlayer(roomId, 'host1', false);
-      
-      // Manually set expiry to past
-      const room = gameLogic.getRoom(roomId);
-      if (room) room.hostOwnershipExpiry = Date.now() - 1000;
-      
-      const result = gameLogic.checkHostOwnershipTTL(roomId);
-      expect(result).toBe(true);
-      
-      const updatedRoom = gameLogic.getRoom(roomId);
-      expect(updatedRoom?.players['player2'].isHost).toBe(true);
-      expect(updatedRoom?.hostOwnershipExpiry).toBeUndefined();
     });
   });
 
@@ -512,11 +455,11 @@ describe('GameLogic', () => {
     let roomId: string;
     let playerId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'p1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
       roomId = room.roomId;
-      playerId = 'p1';
-      gameLogic.joinRoom(roomId, 'socket2', 'Player2', 'p2');
+      playerId = 'user1';
+      gameLogic.joinRoom(roomId, 'user2', 'Player2');
       gameLogic.startGame(roomId);
     });
 
@@ -532,16 +475,16 @@ describe('GameLogic', () => {
     });
 
     it('should hide other players unrevealed traits', () => {
-      const masked = gameLogic.getMaskedRoom(roomId, 'p2');
-      const p1Traits = masked?.players['p1'].traits;
+      const masked = gameLogic.getMaskedRoom(roomId, 'user2');
+      const p1Traits = masked?.players['user1'].traits;
       
       expect(p1Traits?.profession.name).toBe('???');
       expect(p1Traits?.profession.description).toBe('This card has not been revealed yet.');
     });
 
     it('should show own unrevealed traits', () => {
-      const masked = gameLogic.getMaskedRoom(roomId, 'p1');
-      const p1Traits = masked?.players['p1'].traits;
+      const masked = gameLogic.getMaskedRoom(roomId, 'user1');
+      const p1Traits = masked?.players['user1'].traits;
       
       expect(p1Traits?.profession.name).not.toBe('???');
     });
@@ -553,16 +496,16 @@ describe('GameLogic', () => {
         room.bunker!.capacity = 10;
       }
       
-      const masked = gameLogic.getMaskedRoom(roomId, 'p2');
-      const p1Traits = masked?.players['p1'].traits;
+      const masked = gameLogic.getMaskedRoom(roomId, 'user2');
+      const p1Traits = masked?.players['user1'].traits;
       
       expect(p1Traits?.profession.name).not.toBe('???');
     });
   });
 
   describe('getRoom', () => {
-    it('should return room by ID', () => {
-      const room = gameLogic.createRoom('socket1', 'Player1');
+    it('should return room by ID', async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
       const retrieved = gameLogic.getRoom(room.roomId);
       
       expect(retrieved).toBeTruthy();
@@ -575,53 +518,54 @@ describe('GameLogic', () => {
     });
   });
 
-  describe('regenerateRoomId', () => {
-    it('should regenerate room ID', () => {
-      const room = gameLogic.createRoom('socket1', 'Player1');
-      const oldId = room.roomId;
-      const newId = gameLogic.regenerateRoomId(oldId);
+  describe('regenerateRoomCode', () => {
+    it('should regenerate room code', async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
+      const oldCode = room.roomCode;
+      const newCode = gameLogic.regenerateRoomCode(room.roomId);
       
-      expect(newId).toBeTruthy();
-      expect(newId).not.toBe(oldId);
+      expect(newCode).toBeTruthy();
+      expect(newCode).not.toBe(oldCode);
     });
 
     it('should return null for non-existent room', () => {
-      const newId = gameLogic.regenerateRoomId('INVALID');
-      expect(newId).toBeNull();
+      const newCode = gameLogic.regenerateRoomCode('INVALID');
+      expect(newCode).toBeNull();
     });
 
-    it('should update room in map with new ID', () => {
-      const room = gameLogic.createRoom('socket1', 'Player1');
-      const oldId = room.roomId;
-      const newId = gameLogic.regenerateRoomId(oldId);
+    it('should keep roomId the same when regenerating roomCode', async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
+      const oldRoomId = room.roomId;
+      gameLogic.regenerateRoomCode(room.roomId);
       
-      expect(gameLogic.getRoom(oldId)).toBeNull();
-      expect(gameLogic.getRoom(newId!)).toBeTruthy();
+      const updatedRoom = gameLogic.getRoom(oldRoomId);
+      expect(updatedRoom).toBeTruthy();
+      expect(updatedRoom?.roomId).toBe(oldRoomId);
     });
   });
 
   describe('Chat functionality', () => {
     let roomId: string;
 
-    beforeEach(() => {
-      const room = gameLogic.createRoom('socket1', 'Player1', 'p1');
+    beforeEach(async () => {
+      const room = await gameLogic.createRoom('user1', 'Player1');
       roomId = room.roomId;
     });
 
     it('should add chat message', () => {
-      const message = gameLogic.addChatMessage(roomId, 'p1', 'Player1', 'Hello');
+      const message = gameLogic.addChatMessage(roomId, 'socket1', 'Player1', 'Hello');
       expect(message).toBeTruthy();
       expect(message?.message).toBe('Hello');
     });
 
     it('should return null for non-existent room', () => {
-      const message = gameLogic.addChatMessage('INVALID', 'p1', 'Player1', 'Hello');
+      const message = gameLogic.addChatMessage('INVALID', 'socket1', 'Player1', 'Hello');
       expect(message).toBeNull();
     });
 
     it('should limit chat history to 100 messages', () => {
       for (let i = 0; i < 150; i++) {
-        gameLogic.addChatMessage(roomId, 'p1', 'Player1', `Message ${i}`);
+        gameLogic.addChatMessage(roomId, 'socket1', 'Player1', `Message ${i}`);
       }
       
       const history = gameLogic.getChatHistory(roomId);
@@ -636,8 +580,8 @@ describe('GameLogic', () => {
     });
 
     it('should get chat history', () => {
-      gameLogic.addChatMessage(roomId, 'p1', 'Player1', 'Message 1');
-      gameLogic.addChatMessage(roomId, 'p1', 'Player1', 'Message 2');
+      gameLogic.addChatMessage(roomId, 'socket1', 'Player1', 'Message 1');
+      gameLogic.addChatMessage(roomId, 'socket1', 'Player1', 'Message 2');
       
       const history = gameLogic.getChatHistory(roomId);
       expect(history.length).toBe(2);
