@@ -35,6 +35,58 @@
     "room": {
       "loading": "LOADING ROOM...",
       "leaveConfirm": "Are you sure you want to leave the room? This will end your participation in the current game. You won't be able to return."
+    },
+    "faq": {
+      "title": "Bunker Technical Protocol",
+      "backToHome": "EXIT",
+      "q1": {
+        "question": "What happens if the votes are tied?",
+        "answer": "A mini-game for duels is planned. For now, the system will randomly decide who gets exiled. Luck is also a survival skill."
+      },
+      "q2": {
+        "question": "Can I change my vote?",
+        "answer": "No. Think before you click. Once the vote is cast, it's final."
+      },
+      "q3": {
+        "question": "Is there a turn timer?",
+        "answer": "There is no built-in timer yet. Manage your discussion time manually. It might be added in future updates."
+      },
+      "q4": {
+        "question": "Where are the Special Action cards?",
+        "answer": "Work in Progress (WIP). They are coming in future patches."
+      },
+      "q5": {
+        "question": "What happens after I'm exiled?",
+        "answer": "You remain in the room as a spectator. You can see the drama unfold, but you can no longer vote or participate in the bunker's fate."
+      },
+      "q6": {
+        "question": "Connection lost! Will I be kicked?",
+        "answer": "You have a short window to reconnect. If you fail to return in time, the server will permanently remove you from the current session."
+      },
+      "q7": {
+        "question": "Can I move my guest progress to another PC?",
+        "answer": "Only by registering via Casdoor. Guest data is bound to your local browser session."
+      },
+      "q8": {
+        "question": "Can I play on mobile?",
+        "answer": "Technically yes, but not recommended. The UI is currently not optimized or tested for mobile screens. Use a desktop browser for the best experience."
+      },
+      "q9": {
+        "question": "Can I create custom cards or catastrophes?",
+        "answer": "Planned for future updates. Customization is on our roadmap."
+      },
+      "q10": {
+        "question": "How is the bunker capacity calculated?",
+        "answer": "Default formula is $N * 0.4$ (where $N$ is the number of players). However, the Host can manually override this in the room settings."
+      },
+      "q11": {
+        "question": "What if someone is being toxic?",
+        "answer": "The Host has the power to kick any player from the lobby. A formal ban/report system does not exist yet."
+      },
+      "q12": {
+        "question": "Can we play with 2 or 3 players?",
+        "answer": "Minimum is 4 players. Any less and the social deduction mechanics simply don't work."
+      }
     }
   },
   "components": {
@@ -134,7 +186,13 @@
       "language": "Language"
     },
     "siteFooter": {
-      "createdBy": "Created by {author}"
+      "createdBy": "Created by {author}",
+      "about": "About",
+      "support": "Support",
+      "community": "Community",
+      "reportBug": "Report Bug",
+      "featureRequest": "Feature Request",
+      "faq": "FAQ"
     },
     "chat": {
       "title": "COMMS LOG",
