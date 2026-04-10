@@ -373,7 +373,6 @@ export const useGameStore = defineStore('game', {
 | Room state | localStorage | `gameRoom` |
 | Player ID | localStorage | `playerId` |
 | Player name | localStorage | `playerName` |
-| Persistent ID | localStorage | `persistentId` |
 | Connection status | In-memory only | - |
 
 ---
@@ -391,8 +390,7 @@ export const useGameStore = defineStore('game', {
 // Always use objects, never positional arguments
 socket.emit('JOIN_ROOM', { 
   roomId: 'ABC123',
-  playerName: 'John',
-  persistentId: 'uuid-here'
+  playerName: 'John'
 });
 
 // Never do this
@@ -462,8 +460,8 @@ Update README.md when:
 ```typescript
 /**
  * Represents a player in the game.
- * @property id - Persistent UUID (constant across reconnects)
- * @property socketId - Current Socket.io connection ID (changes on reconnect)
+ * @property id - Player socket ID
+ * @property socketId - Current Socket.io connection ID
  * @property traits - All 6 hidden trait cards
  */
 export interface Player {
@@ -506,7 +504,7 @@ body (optional)
 - Validate all user inputs on both client and server
 - Sanitize player names (max length, allowed characters)
 - Rate limit room creation and joins
-- Use persistent IDs for player identification, not socket IDs
+- Use authentication tokens for player identification
 
 ---
 

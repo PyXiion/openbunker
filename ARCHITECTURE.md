@@ -8,8 +8,8 @@ This document contains technical details about the application's architecture, d
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `CREATE_ROOM` | `{ playerName, persistentId?, language? }` | Create new room |
-| `JOIN_ROOM` | `{ roomId, playerName, persistentId? }` | Join existing room |
+| `CREATE_ROOM` | `{ playerName, language? }` | Create new room |
+| `JOIN_ROOM` | `{ roomId, playerName }` | Join existing room |
 | `START_GAME` | `{ roomId }` | Host starts game |
 | `REVEAL_CARD` | `{ roomId, traitType }` | Reveal a trait card |
 | `END_TURN` | `{ roomId }` | End current turn |
@@ -22,7 +22,7 @@ This document contains technical details about the application's architecture, d
 
 | Event | Payload | Description |
 |-------|---------|-------------|
-| `ROOM_CREATED` | `{ roomId, persistentId }` | Room created successfully |
+| `ROOM_CREATED` | `{ roomId }` | Room created successfully |
 | `ROOM_STATE_UPDATE` | `GameRoom` | Full game state (masked per player) |
 | `JOIN_ERROR` | `{ message }` | Failed to join room |
 | `ERROR` | `{ message }` | General error |

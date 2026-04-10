@@ -44,3 +44,8 @@ default_power = 100
 [social]
 telegram_url = "https://t.me/PyXiion_channel"
 discord_url = "https://discord.gg/KpAMMCdcrJ"
+
+[support]
+report_bug_url = "https://github.com/PyXiion/openbunker/issues"
+feature_request_url = "https://github.com/PyXiion/openbunker/issues"
+faq_url = "/faq"
