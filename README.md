@@ -28,11 +28,11 @@ A multiplayer social deduction game where players debate their usefulness to sur
 - **English & Russian** language support (English disabled temporarily)
 
 ## Screenshots
-![Main page screenshot](mainpage.png)
-![Lobby page screenshot](lobbypage.png)
-![Gameplay screenshot](gameplay.png)
-![Gameplay cards screenshot](gameplay_card.png)
-![Game over screenshot](gameover.png)
+![Main page screenshot](.github/media/mainpage.png)
+![Lobby page screenshot](.github/media/lobbypage.png)
+![Gameplay screenshot](.github/media/gameplay.png)
+![Gameplay cards screenshot](.github/media/gameplay_card.png)
+![Game over screenshot](.github/media/gameover.png)
 
 ## Project Structure
 
