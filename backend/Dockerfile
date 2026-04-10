@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm install --only=production=false
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -19,7 +19,7 @@ RUN npm run build
 RUN cp -r src/game/data dist/game/data
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:22-alpine AS production
 
 WORKDIR /app
 
@@ -31,7 +31,7 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --chown=nodejs:nodejs package*.json ./
 
 # Install production dependencies
-RUN npm install --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy built application from builder stage with ownership
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
