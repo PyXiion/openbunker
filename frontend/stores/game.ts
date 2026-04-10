@@ -33,7 +33,6 @@ export interface ChatMessage {
 
 export interface Player {
   id: string;
-  persistentId: string;
   name: string;
   isHost: boolean;
   isExiled: boolean;
@@ -63,9 +62,9 @@ interface GameRoom {
   currentTurnIndex: number;
   cardsToRevealPerTurn: number;
   cardsRevealedThisTurn: number;
-  hostOwnershipExpiry?: number;
   settings?: GameSettings;
   chatHistory: ChatMessage[];
+  hostDisconnectedAt?: number;
 }
 
 export const useGameStore = defineStore('game', {
@@ -73,7 +72,6 @@ export const useGameStore = defineStore('game', {
     room: null as GameRoom | null,
     playerId: null as string | null,
     playerName: null as string | null,
-    persistentId: null as string | null,
     isGuest: null as boolean | null,
     isReconnecting: false,
     error: null as string | null,
@@ -209,10 +207,6 @@ export const useGameStore = defineStore('game', {
       localStorage.setItem('playerName', name);
     },
 
-    setPersistentId(id: string) {
-      this.persistentId = id;
-      localStorage.setItem('persistentId', id);
-    },
 
     setReconnecting(isReconnecting: boolean) {
       this.isReconnecting = isReconnecting;
@@ -235,14 +229,11 @@ export const useGameStore = defineStore('game', {
       this.playerId = null;
       this.chatHistory = [];
       // Keep playerName for reuse on next game
-      this.persistentId = null;
       this.isGuest = null;
       this.isReconnecting = false;
       this.error = null;
       localStorage.removeItem('gameRoom');
       localStorage.removeItem('playerId');
-      // Keep playerName in localStorage
-      localStorage.removeItem('persistentId');
     },
 
     // Clear room state only (for leaving room without disconnecting socket)
@@ -254,7 +245,6 @@ export const useGameStore = defineStore('game', {
       this.isGuest = null;
       localStorage.removeItem('gameRoom');
       localStorage.removeItem('playerId');
-      // Keep playerName, persistentId, and connected status
     },
 
     // Load persisted state from localStorage
@@ -262,12 +252,10 @@ export const useGameStore = defineStore('game', {
       try {
         const savedRoom = localStorage.getItem('gameRoom');
         const savedPlayerName = localStorage.getItem('playerName');
-        const savedPersistentId = localStorage.getItem('persistentId');
         const savedPlayerId = localStorage.getItem('playerId');
 
         if (savedRoom) this.room = JSON.parse(savedRoom);
         if (savedPlayerName) this.playerName = savedPlayerName;
-        if (savedPersistentId) this.persistentId = savedPersistentId;
         if (savedPlayerId) this.playerId = savedPlayerId;
       } catch (error) {
         console.error('Failed to load persisted state:', error);
@@ -284,10 +272,6 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    // Get persistent ID (must be set by server via ROOM_CREATED or ROOM_STATE_UPDATE)
-    getOrCreatePersistentId(): string | null {
-      return this.persistentId;
-    },
 
     // Apply a differential update to the room state
     applyRoomDelta(delta: Record<string, any>) {

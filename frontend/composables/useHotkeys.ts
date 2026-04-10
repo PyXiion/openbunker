@@ -9,6 +9,12 @@ interface HotkeyConfig {
 
 export function useHotkeys(hotkeys: HotkeyConfig[]) {
   const handleKeyPress = (e: KeyboardEvent) => {
+    // Don't trigger hotkeys when user is typing in input fields
+    const activeTag = document.activeElement?.tagName.toLowerCase();
+    if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+      return;
+    }
+
     for (const hotkey of hotkeys) {
       const keys = Array.isArray(hotkey.key) ? hotkey.key : [hotkey.key];
       const keyMatches = keys.some(k => 
@@ -37,6 +43,12 @@ export function useHotkeys(hotkeys: HotkeyConfig[]) {
 export function useHotkeysWithCondition(hotkeys: HotkeyConfig[], condition: Ref<boolean>) {
   const handleKeyPress = (e: KeyboardEvent) => {
     if (!condition.value) return;
+
+    // Don't trigger hotkeys when user is typing in input fields
+    const activeTag = document.activeElement?.tagName.toLowerCase();
+    if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+      return;
+    }
     
     for (const hotkey of hotkeys) {
       const keys = Array.isArray(hotkey.key) ? hotkey.key : [hotkey.key];

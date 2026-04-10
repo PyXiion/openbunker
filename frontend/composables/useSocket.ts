@@ -121,7 +121,6 @@ export const useSocket = () => {
       const currentPlayer = Object.values(room.players).find((p: any) => p.id === auth.currentUser.value?.userId || p.id === auth.guestUser.value?.userId) as any;
       if (currentPlayer) {
         gameStore.setPlayerId(currentPlayer.id);
-        gameStore.setPersistentId(currentPlayer.id);
       }
       
       gameStore.setRoom(room);
