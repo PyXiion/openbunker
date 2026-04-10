@@ -67,6 +67,7 @@ services:
       postgres:
         condition: service_healthy
       casdoor:
+        condition: service_started
     networks:
       - bunker-network
     restart: unless-stopped
