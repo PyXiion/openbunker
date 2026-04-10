@@ -10,14 +10,6 @@ A multiplayer social deduction game where players debate their usefulness to sur
 
 🚀 **Play at [bunker.pyxiion.ru](https://bunker.pyxiion.ru)**
 
-## How to Play
-
-1. **Join a Room** - Enter a 6-character room code with friends
-2. **Reveal Cards** - Take turns revealing your trait cards (profession first!)
-3. **Vote to Exile** - After everyone reveals, vote to exile someone
-4. **Survive** - Keep playing until only the bunker capacity remains
-5. **Win** - Be one of the survivors who make it into the bunker!
-
 ## Tech Stack
 
 - **Frontend**: Nuxt 3 + Vue 3 + TailwindCSS
@@ -34,6 +26,13 @@ A multiplayer social deduction game where players debate their usefulness to sur
 - **Guest mode** for quick play, or sign in for persistent stats
 - **Full game history** and statistics for registered users
 - **English & Russian** language support (English disabled temporarily)
+
+## Screenshots
+![Main page screenshot](mainpage.png)
+![Lobby page screenshot](lobbypage.png)
+![Gameplay screenshot](gameplay.png)
+![Gameplay cards screenshot](gameplay_card.png)
+![Game over screenshot](gameover.png)
 
 ## Project Structure
 
